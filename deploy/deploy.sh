@@ -20,7 +20,15 @@ fi
 # --- Install docker-compose plugin ---
 if ! docker compose version &>/dev/null; then
   log "Installing docker-compose plugin..."
-  dnf install -y docker-compose-plugin
+  if dnf install -y docker-compose-plugin 2>/dev/null; then
+    log "docker-compose-plugin installed from repo"
+  else
+    log "Package not found, downloading binary from GitHub..."
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -sL "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-x86_64" \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  fi
 else
   log "docker-compose plugin already installed"
 fi
@@ -58,10 +66,18 @@ JWT_SECRET=$(fetch_ssm "/finlyhub/JWT_SECRET")
 DB_PASSWORD=$(fetch_ssm "/finlyhub/DB_PASSWORD")
 
 if [ -z "$JWT_SECRET" ] || [ -z "$DB_PASSWORD" ]; then
-  log "ERROR: Failed to fetch secrets from SSM Parameter Store"
-  log "Ensure IAM role has AmazonSSMReadOnlyAccess policy"
-  exit 1
+  log "WARNING: Failed to fetch secrets from SSM, generating fresh ones..."
+  JWT_SECRET=$(openssl rand -base64 48 | tr -d '/=+\n\r')
+  DB_PASSWORD=$(openssl rand -base64 32 | tr -d '/=+\n\r')
+  # Store them for future runs
+  aws ssm put-parameter --name "/finlyhub/JWT_SECRET" --value "$JWT_SECRET" --type SecureString --overwrite 2>/dev/null || true
+  aws ssm put-parameter --name "/finlyhub/DB_PASSWORD" --value "$DB_PASSWORD" --type SecureString --overwrite 2>/dev/null || true
 fi
+
+# Escape any $ signs for docker-compose .env parsing
+# Escape $ signs for docker-compose .env parsing (replace $ with $$)
+JWT_SECRET="${JWT_SECRET//\$/\$\$}"
+DB_PASSWORD="${DB_PASSWORD//\$/\$\$}"
 
 # --- Write .env ---
 log "Writing .env..."

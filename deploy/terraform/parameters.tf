@@ -1,6 +1,7 @@
 resource "random_password" "jwt_secret" {
-  count  = var.jwt_secret == "" ? 1 : 0
-  length = 64
+  count   = var.jwt_secret == "" ? 1 : 0
+  length  = 64
+  special = false
 }
 
 resource "random_password" "db_password" {
