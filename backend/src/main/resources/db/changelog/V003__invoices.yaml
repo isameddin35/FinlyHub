@@ -1,0 +1,171 @@
+databaseChangeLog:
+  - changeSet:
+      id: V003-1
+      author: finlyhub
+      changes:
+        - createTable:
+            tableName: invoices
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_invoices_user
+                    references: users(id)
+              - column:
+                  name: document_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_invoices_document
+                    references: documents(id)
+              - column:
+                  name: invoice_number
+                  type: VARCHAR(100)
+              - column:
+                  name: vendor_name
+                  type: VARCHAR(255)
+              - column:
+                  name: vendor_email
+                  type: VARCHAR(255)
+              - column:
+                  name: vendor_address
+                  type: TEXT
+              - column:
+                  name: invoice_date
+                  type: DATE
+              - column:
+                  name: due_date
+                  type: DATE
+              - column:
+                  name: currency
+                  type: VARCHAR(3)
+                  defaultValue: USD
+              - column:
+                  name: subtotal
+                  type: DECIMAL(15, 2)
+              - column:
+                  name: tax_amount
+                  type: DECIMAL(15, 2)
+              - column:
+                  name: vat_amount
+                  type: DECIMAL(15, 2)
+              - column:
+                  name: discount_amount
+                  type: DECIMAL(15, 2)
+              - column:
+                  name: total_amount
+                  type: DECIMAL(15, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: confidence_score
+                  type: DECIMAL(5, 2)
+              - column:
+                  name: processing_time_ms
+                  type: BIGINT
+              - column:
+                  name: approved_by
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_invoices_approver
+                    references: users(id)
+              - column:
+                  name: approved_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+        - createTable:
+            tableName: invoice_extractions
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: invoice_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_extractions_invoice
+                    references: invoices(id)
+              - column:
+                  name: stage
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: raw_ocr_text
+                  type: TEXT
+              - column:
+                  name: extracted_data
+                  type: JSONB
+              - column:
+                  name: confidence_scores
+                  type: JSONB
+              - column:
+                  name: corrected_data
+                  type: JSONB
+              - column:
+                  name: correction_notes
+                  type: TEXT
+              - column:
+                  name: llm_prompt
+                  type: TEXT
+              - column:
+                  name: llm_response
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+  - changeSet:
+      id: V003-2
+      author: finlyhub
+      changes:
+        - createIndex:
+            tableName: invoices
+            indexName: idx_invoices_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: invoices
+            indexName: idx_invoices_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: invoices
+            indexName: idx_invoices_date
+            columns:
+              - column:
+                  name: invoice_date
+        - createIndex:
+            tableName: invoice_extractions
+            indexName: idx_extractions_invoice
+            columns:
+              - column:
+                  name: invoice_id

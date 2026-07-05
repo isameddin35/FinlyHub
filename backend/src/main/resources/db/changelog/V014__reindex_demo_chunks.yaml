@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: V014-1
+      author: finlyhub
+      context: demo
+      changes:
+        - sql:
+            sql: >
+              INSERT INTO document_chunks (document_id, chunk_index, content, token_count, embedding, created_at)
+              VALUES
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf'), 0,
+                 'Small Business Tax Deductions Guide 2026. Section 1: Home Office Deduction. Small business owners who use a portion of their home exclusively for business may qualify for the home office deduction. The simplified option allows $5 per square foot up to 300 square feet.',
+                 85, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,768)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf'), 1,
+                 'Section 2: Vehicle Expenses. Business owners can deduct vehicle expenses using either the standard mileage rate of 67 cents per mile or actual expense method. Section 3: Health Insurance Premiums. Self-employed individuals may deduct 100% of health insurance premiums for themselves and their dependents.',
+                 72, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,768)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf'), 2,
+                 'Additional deductions include retirement plan contributions (SEP IRA, Solo 401k), business equipment and software depreciation under Section 179, and education expenses directly related to your current business.',
+                 60, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,768)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx'), 0,
+                 'EU VAT Directive Summary 2026. Article 1: Standard VAT Rate. The standard VAT rate shall be at least 15% and applies to most goods and services. Article 2: Reduced Rates. Member states may apply one or two reduced rates of at least 5% to specific categories including food, water, pharmaceuticals, and medical equipment.',
+                 78, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,768)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx'), 1,
+                 'Article 3: VAT on Digital Services. Digital services supplied to consumers are taxed in the member state of the consumer under the One Stop Shop (OSS) scheme. Article 4: Exemptions. Certain supplies including financial services, insurance, education, and healthcare are exempt from VAT.',
+                 68, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,768)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx'), 2,
+                 'Cross-border transactions within the EU are generally exempt from VAT when supplied to a registered business (B2B) under the reverse charge mechanism. B2C cross-border digital services are taxed at the rate applicable in the customer''s country.',
+                 55, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,768)), NOW())

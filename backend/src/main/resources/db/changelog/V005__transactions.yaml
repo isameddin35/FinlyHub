@@ -1,0 +1,309 @@
+databaseChangeLog:
+  - changeSet:
+      id: V005-1
+      author: finlyhub
+      changes:
+        - createTable:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+                    unique: true
+              - column:
+                  name: description
+                  type: VARCHAR(255)
+              - column:
+                  name: icon
+                  type: VARCHAR(50)
+              - column:
+                  name: color
+                  type: VARCHAR(7)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+        - createTable:
+            tableName: transactions
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_transactions_user
+                    references: users(id)
+              - column:
+                  name: category_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_transactions_category
+                    references: transaction_categories(id)
+              - column:
+                  name: transaction_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(500)
+              - column:
+                  name: amount
+                  type: DECIMAL(15, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: currency
+                  type: VARCHAR(3)
+                  defaultValue: USD
+              - column:
+                  name: reference
+                  type: VARCHAR(255)
+              - column:
+                  name: vendor
+                  type: VARCHAR(255)
+              - column:
+                  name: source
+                  type: VARCHAR(50)
+                  defaultValue: MANUAL
+              - column:
+                  name: suggested_category_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_transactions_suggested
+                    references: transaction_categories(id)
+              - column:
+                  name: confidence_score
+                  type: DECIMAL(5, 2)
+              - column:
+                  name: categorization_status
+                  type: VARCHAR(50)
+                  defaultValue: PENDING
+              - column:
+                  name: user_approved
+                  type: BOOLEAN
+              - column:
+                  name: approved_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: import_batch_id
+                  type: VARCHAR(100)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+  - changeSet:
+      id: V005-2
+      author: finlyhub
+      changes:
+        - createIndex:
+            tableName: transactions
+            indexName: idx_tx_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: transactions
+            indexName: idx_tx_date
+            columns:
+              - column:
+                  name: transaction_date
+        - createIndex:
+            tableName: transactions
+            indexName: idx_tx_status
+            columns:
+              - column:
+                  name: categorization_status
+        - createIndex:
+            tableName: transactions
+            indexName: idx_tx_batch
+            columns:
+              - column:
+                  name: import_batch_id
+        - createIndex:
+            tableName: transactions
+            indexName: idx_tx_category
+            columns:
+              - column:
+                  name: category_id
+        - createIndex:
+            tableName: transactions
+            indexName: idx_tx_suggested
+            columns:
+              - column:
+                  name: suggested_category_id
+
+  - changeSet:
+      id: V005-3
+      author: finlyhub
+      changes:
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Uncategorized
+              - column:
+                  name: description
+                  value: Transactions that have not been categorized
+              - column:
+                  name: icon
+                  value: help-circle
+              - column:
+                  name: color
+                  value: "#6B7280"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Meals & Entertainment
+              - column:
+                  name: description
+                  value: Business meals, client entertainment
+              - column:
+                  name: icon
+                  value: coffee
+              - column:
+                  name: color
+                  value: "#F59E0B"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Software & Subscriptions
+              - column:
+                  name: description
+                  value: SaaS products, software licenses
+              - column:
+                  name: icon
+                  value: monitor
+              - column:
+                  name: color
+                  value: "#3B82F6"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Transportation
+              - column:
+                  name: description
+                  value: Travel, rideshare, fuel, parking
+              - column:
+                  name: icon
+                  value: truck
+              - column:
+                  name: color
+                  value: "#8B5CF6"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Office Supplies
+              - column:
+                  name: description
+                  value: Office equipment, stationery
+              - column:
+                  name: icon
+                  value: package
+              - column:
+                  name: color
+                  value: "#10B981"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Rent & Utilities
+              - column:
+                  name: description
+                  value: Office rent, electricity, internet
+              - column:
+                  name: icon
+                  value: building
+              - column:
+                  name: color
+                  value: "#EF4444"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Professional Services
+              - column:
+                  name: description
+                  value: Legal, consulting, accounting fees
+              - column:
+                  name: icon
+                  value: briefcase
+              - column:
+                  name: color
+                  value: "#EC4899"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Revenue
+              - column:
+                  name: description
+                  value: Income and revenue deposits
+              - column:
+                  name: icon
+                  value: trending-up
+              - column:
+                  name: color
+                  value: "#22C55E"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Taxes
+              - column:
+                  name: description
+                  value: Tax payments and refunds
+              - column:
+                  name: icon
+                  value: receipt
+              - column:
+                  name: color
+                  value: "#F97316"
+        - insert:
+            tableName: transaction_categories
+            columns:
+              - column:
+                  name: name
+                  value: Payroll
+              - column:
+                  name: description
+                  value: Salaries, wages, employee benefits
+              - column:
+                  name: icon
+                  value: users
+              - column:
+                  name: color
+                  value: "#06B6D4"

@@ -1,0 +1,1370 @@
+databaseChangeLog:
+  - changeSet:
+      id: V008-1
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: email
+                  value: admin@finlyhub.com
+              - column:
+                  name: password_hash
+                  value: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+              - column:
+                  name: first_name
+                  value: Sarah
+              - column:
+                  name: last_name
+                  value: Chen
+              - column:
+                  name: company
+                  value: Finly Hub Inc.
+              - column:
+                  name: email_verified
+                  valueBoolean: true
+              - column:
+                  name: enabled
+                  valueBoolean: true
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: email
+                  value: accountant@finlyhub.com
+              - column:
+                  name: password_hash
+                  value: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+              - column:
+                  name: first_name
+                  value: Michael
+              - column:
+                  name: last_name
+                  value: Torres
+              - column:
+                  name: company
+                  value: Torres Accounting LLC
+              - column:
+                  name: email_verified
+                  valueBoolean: true
+              - column:
+                  name: enabled
+                  valueBoolean: true
+
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: email
+                  value: viewer@finlyhub.com
+              - column:
+                  name: password_hash
+                  value: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+              - column:
+                  name: first_name
+                  value: Emily
+              - column:
+                  name: last_name
+                  value: Watson
+              - column:
+                  name: company
+                  value: Watson Consulting
+              - column:
+                  name: email_verified
+                  valueBoolean: true
+              - column:
+                  name: enabled
+                  valueBoolean: true
+
+  - changeSet:
+      id: V008-2
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: role_id
+                  valueComputed: (SELECT id FROM roles WHERE name = 'ADMIN')
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: role_id
+                  valueComputed: (SELECT id FROM roles WHERE name = 'ACCOUNTANT')
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: role_id
+                  valueComputed: (SELECT id FROM roles WHERE name = 'ACCOUNTANT')
+        - insert:
+            tableName: user_roles
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'viewer@finlyhub.com')
+              - column:
+                  name: role_id
+                  valueComputed: (SELECT id FROM roles WHERE name = 'VIEWER')
+
+  - changeSet:
+      id: V008-3
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: invoices
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: invoice_number
+                  value: INV-2026-001
+              - column:
+                  name: vendor_name
+                  value: Microsoft Corporation
+              - column:
+                  name: invoice_date
+                  valueDate: 2026-01-15
+              - column:
+                  name: due_date
+                  valueDate: 2026-02-14
+              - column:
+                  name: currency
+                  value: USD
+              - column:
+                  name: subtotal
+                  valueNumeric: 1200.00
+              - column:
+                  name: tax_amount
+                  valueNumeric: 120.00
+              - column:
+                  name: total_amount
+                  valueNumeric: 1320.00
+              - column:
+                  name: status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 98.50
+        - insert:
+            tableName: invoices
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: invoice_number
+                  value: INV-2026-002
+              - column:
+                  name: vendor_name
+                  value: Amazon Web Services
+              - column:
+                  name: invoice_date
+                  valueDate: 2026-01-20
+              - column:
+                  name: due_date
+                  valueDate: 2026-02-19
+              - column:
+                  name: currency
+                  value: USD
+              - column:
+                  name: subtotal
+                  valueNumeric: 850.00
+              - column:
+                  name: tax_amount
+                  valueNumeric: 85.00
+              - column:
+                  name: total_amount
+                  valueNumeric: 935.00
+              - column:
+                  name: status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 92.30
+        - insert:
+            tableName: invoices
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: invoice_number
+                  value: INV-2026-003
+              - column:
+                  name: vendor_name
+                  value: WeWork
+              - column:
+                  name: invoice_date
+                  valueDate: 2026-02-01
+              - column:
+                  name: due_date
+                  valueDate: 2026-03-01
+              - column:
+                  name: currency
+                  value: USD
+              - column:
+                  name: subtotal
+                  valueNumeric: 2400.00
+              - column:
+                  name: vat_amount
+                  valueNumeric: 480.00
+              - column:
+                  name: total_amount
+                  valueNumeric: 2880.00
+              - column:
+                  name: status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 87.60
+
+  - changeSet:
+      id: V008-4
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: category_id
+                  valueComputed: (SELECT id FROM transaction_categories WHERE name = 'Meals & Entertainment')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-10
+              - column:
+                  name: description
+                  value: Starbucks - Office Coffee Run
+              - column:
+                  name: amount
+                  valueNumeric: -15.00
+              - column:
+                  name: vendor
+                  value: Starbucks
+              - column:
+                  name: categorization_status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 97.00
+              - column:
+                  name: user_approved
+                  valueBoolean: true
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: category_id
+                  valueComputed: (SELECT id FROM transaction_categories WHERE name = 'Software & Subscriptions')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-11
+              - column:
+                  name: description
+                  value: Microsoft 365 Business Subscription
+              - column:
+                  name: amount
+                  valueNumeric: -120.00
+              - column:
+                  name: vendor
+                  value: Microsoft
+              - column:
+                  name: categorization_status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 99.00
+              - column:
+                  name: user_approved
+                  valueBoolean: true
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: category_id
+                  valueComputed: (SELECT id FROM transaction_categories WHERE name = 'Transportation')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-12
+              - column:
+                  name: description
+                  value: Uber Business Trip - Client Meeting
+              - column:
+                  name: amount
+                  valueNumeric: -30.00
+              - column:
+                  name: vendor
+                  value: Uber
+              - column:
+                  name: categorization_status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 95.00
+              - column:
+                  name: user_approved
+                  valueBoolean: true
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: category_id
+                  valueComputed: (SELECT id FROM transaction_categories WHERE name = 'Revenue')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-15
+              - column:
+                  name: description
+                  value: Client Payment - Q1 Consulting
+              - column:
+                  name: amount
+                  valueNumeric: 15000.00
+              - column:
+                  name: vendor
+                  value: Acme Corp
+              - column:
+                  name: categorization_status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 98.00
+              - column:
+                  name: user_approved
+                  valueBoolean: true
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-18
+              - column:
+                  name: description
+                  value: Slack Subscription
+              - column:
+                  name: amount
+                  valueNumeric: -85.00
+              - column:
+                  name: vendor
+                  value: Slack
+              - column:
+                  name: categorization_status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 78.00
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-22
+              - column:
+                  name: description
+                  value: Office Rent - January
+              - column:
+                  name: amount
+                  valueNumeric: -3200.00
+              - column:
+                  name: vendor
+                  value: WeWork
+              - column:
+                  name: categorization_status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 94.00
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-25
+              - column:
+                  name: description
+                  value: AWS Cloud Services
+              - column:
+                  name: amount
+                  valueNumeric: -450.00
+              - column:
+                  name: vendor
+                  value: Amazon Web Services
+              - column:
+                  name: categorization_status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 91.00
+
+  - changeSet:
+      id: V008-5
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: conversations
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: title
+                  value: Tax Policy Questions
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: conversations
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: title
+                  value: Expense Reimbursement Policy
+              - column:
+                  name: is_active
+                  valueBoolean: true
+        - insert:
+            tableName: conversations
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: title
+                  value: VAT Rates for Services
+              - column:
+                  name: is_active
+                  valueBoolean: true
+
+  - changeSet:
+      id: V008-6
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: reconciliations
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: title
+                  value: January 2026 Bank Reconciliation
+              - column:
+                  name: status
+                  value: IN_PROGRESS
+              - column:
+                  name: period_start
+                  valueDate: 2026-01-01
+              - column:
+                  name: period_end
+                  valueDate: 2026-01-31
+              - column:
+                  name: total_bank_transactions
+                  valueNumeric: 45
+              - column:
+                  name: total_accounting_transactions
+                  valueNumeric: 42
+              - column:
+                  name: matched_count
+                  valueNumeric: 38
+              - column:
+                  name: unmatched_count
+                  valueNumeric: 4
+              - column:
+                  name: needs_review_count
+                  valueNumeric: 3
+
+  - changeSet:
+      id: V008-7
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: notifications
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: type
+                  value: INVOICE_PROCESSED
+              - column:
+                  name: title
+                  value: Invoice Processed
+              - column:
+                  name: message
+                  value: Invoice INV-2026-003 from WeWork has been processed and is ready for review.
+        - insert:
+            tableName: notifications
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: type
+                  value: TRANSACTIONS_IMPORTED
+              - column:
+                  name: title
+                  value: Transactions Imported
+              - column:
+                  name: message
+                  value: 15 transactions were imported. 3 need categorization review.
+        - insert:
+            tableName: notifications
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: type
+                  value: RECONCILIATION_UPDATE
+              - column:
+                  name: title
+                  value: Reconciliation Progress
+              - column:
+                  name: message
+                  value: January reconciliation is 84% complete. 3 items need your review.
+
+  - changeSet:
+      id: V008-8
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: documents
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: filename
+                  value: tax_policy_2026.pdf
+              - column:
+                  name: original_filename
+                  value: tax_policy_2026.pdf
+              - column:
+                  name: content_type
+                  value: application/pdf
+              - column:
+                  name: file_size
+                  valueNumeric: 245000
+              - column:
+                  name: storage_path
+                  value: /app/uploads/documents/demo_tax_policy_2026.pdf
+              - column:
+                  name: document_type
+                  value: POLICY
+              - column:
+                  name: status
+                  value: INDEXED
+              - column:
+                  name: raw_text
+                  value: >-
+                    Small Business Tax Deductions Guide 2026. Section 1: Home Office
+                    Deduction. Small business owners who use a portion of their home
+                    exclusively for business may qualify for the home office deduction.
+                    The simplified option allows $5 per square foot up to 300 square
+                    feet. Section 2: Vehicle Expenses. Business owners can deduct
+                    vehicle expenses using either the standard mileage rate of 67 cents
+                    per mile or actual expense method. Section 3: Health Insurance
+                    Premiums. Self-employed individuals may deduct 100% of health
+                    insurance premiums for themselves and their dependents.
+        - insert:
+            tableName: documents
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: filename
+                  value: eu_vat_directive.docx
+              - column:
+                  name: original_filename
+                  value: eu_vat_directive.docx
+              - column:
+                  name: content_type
+                  value: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+              - column:
+                  name: file_size
+                  valueNumeric: 189000
+              - column:
+                  name: storage_path
+                  value: /app/uploads/documents/demo_eu_vat_directive.docx
+              - column:
+                  name: document_type
+                  value: POLICY
+              - column:
+                  name: status
+                  value: INDEXED
+              - column:
+                  name: raw_text
+                  value: >-
+                    EU VAT Directive Summary 2026. Article 1: Standard VAT Rate. The
+                    standard VAT rate shall be at least 15% and applies to most goods
+                    and services. Article 2: Reduced Rates. Member states may apply
+                    one or two reduced rates of at least 5% to specific categories
+                    including food, water, pharmaceuticals, and medical equipment.
+                    Article 3: VAT on Digital Services. Digital services supplied to
+                    consumers are taxed in the member state of the consumer under the
+                    One Stop Shop (OSS) scheme. Article 4: Exemptions. Certain
+                    supplies including financial services, insurance, education, and
+                    healthcare are exempt from VAT.
+
+  - changeSet:
+      id: V008-9
+      author: finlyhub
+      context: demo
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO document_chunks (document_id, chunk_index, content, token_count, embedding, created_at)
+              VALUES
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf'), 0,
+                 'Small Business Tax Deductions Guide 2026. Section 1: Home Office Deduction. Small business owners who use a portion of their home exclusively for business may qualify for the home office deduction. The simplified option allows $5 per square foot up to 300 square feet.',
+                 85, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,1536)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf'), 1,
+                 'Section 2: Vehicle Expenses. Business owners can deduct vehicle expenses using either the standard mileage rate of 67 cents per mile or actual expense method. Section 3: Health Insurance Premiums. Self-employed individuals may deduct 100% of health insurance premiums for themselves and their dependents.',
+                 72, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,1536)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf'), 2,
+                 'Additional deductions include retirement plan contributions (SEP IRA, Solo 401k), business equipment and software depreciation under Section 179, and education expenses directly related to your current business.',
+                 60, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,1536)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx'), 0,
+                 'EU VAT Directive Summary 2026. Article 1: Standard VAT Rate. The standard VAT rate shall be at least 15% and applies to most goods and services. Article 2: Reduced Rates. Member states may apply one or two reduced rates of at least 5% to specific categories including food, water, pharmaceuticals, and medical equipment.',
+                 78, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,1536)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx'), 1,
+                 'Article 3: VAT on Digital Services. Digital services supplied to consumers are taxed in the member state of the consumer under the One Stop Shop (OSS) scheme. Article 4: Exemptions. Certain supplies including financial services, insurance, education, and healthcare are exempt from VAT.',
+                 68, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,1536)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx'), 2,
+                 'Cross-border transactions within the EU are generally exempt from VAT when supplied to a registered business (B2B) under the reverse charge mechanism. B2C cross-border digital services are taxed at the rate applicable in the customer''s country.',
+                 55, (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,1536)), NOW());
+
+  - changeSet:
+      id: V008-10
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: messages
+            columns:
+              - column:
+                  name: conversation_id
+                  valueComputed: (SELECT id FROM conversations WHERE title = 'Tax Policy Questions')
+              - column:
+                  name: role
+                  value: USER
+              - column:
+                  name: content
+                  value: What are the current tax deductions available for small businesses in 2026?
+              - column:
+                  name: token_count
+                  valueNumeric: 15
+        - insert:
+            tableName: messages
+            columns:
+              - column:
+                  name: conversation_id
+                  valueComputed: (SELECT id FROM conversations WHERE title = 'Tax Policy Questions')
+              - column:
+                  name: role
+                  value: ASSISTANT
+              - column:
+                  name: content
+                  value: >-
+                    Based on the documentation provided, here are the key tax deductions for small businesses in 2026:
+
+                    1. **Home Office Deduction** - Up to $5/sq. ft. for up to 300 sq. ft. ($1,500 max) using the simplified method, or actual expenses for the dedicated business portion of your home.
+
+                    2. **Vehicle Expenses** - 67 cents per mile standard mileage rate, or actual expense method (gas, maintenance, depreciation, insurance).
+
+                    3. **Health Insurance Premiums** - 100% deduction for self-employed individuals and their dependents.
+
+                    4. **Retirement Plans** - SEP IRA and Solo 401k contributions are deductible.
+
+                    5. **Section 179** - Immediate expensing of business equipment and software up to $1,160,000.
+
+                    6. **Education Expenses** - Training and education directly related to your current business.
+
+                    Would you like more details on any of these deductions?
+              - column:
+                  name: token_count
+                  valueNumeric: 148
+        - insert:
+            tableName: messages
+            columns:
+              - column:
+                  name: conversation_id
+                  valueComputed: (SELECT id FROM conversations WHERE title = 'Expense Reimbursement Policy')
+              - column:
+                  name: role
+                  value: USER
+              - column:
+                  name: content
+                  value: What is the company policy on expense reimbursements for business travel?
+              - column:
+                  name: token_count
+                  valueNumeric: 14
+        - insert:
+            tableName: messages
+            columns:
+              - column:
+                  name: conversation_id
+                  valueComputed: (SELECT id FROM conversations WHERE title = 'Expense Reimbursement Policy')
+              - column:
+                  name: role
+                  value: ASSISTANT
+              - column:
+                  name: content
+                  value: >-
+                    Based on available documentation, here is the company expense reimbursement policy:
+
+                    **Travel Expenses:**
+                    - Economy class flights for all domestic travel under 6 hours
+                    - Business class permitted for international flights over 6 hours
+                    - Hotel accommodations up to $250/night standard, $400/night for major cities
+                    - Meals: $60/day for domestic, $100/day for international (receipts required over $25)
+
+                    **Reimbursement Process:**
+                    1. Submit itemized receipts within 30 days of expense
+                    2. Use the expense report template in the accounting system
+                    3. Manager approval required for expenses over $500
+                    4. Finance processes reimbursements within 15 business days
+
+                    **Non-Reimbursable:**
+                    - Personal entertainment and leisure activities
+                    - Alcoholic beverages over $20
+                    - Upgrades not related to business necessity
+                    - Late submission fees or penalties
+
+                    Would you like me to clarify any specific aspect of the policy?
+              - column:
+                  name: token_count
+                  valueNumeric: 178
+        - insert:
+            tableName: messages
+            columns:
+              - column:
+                  name: conversation_id
+                  valueComputed: (SELECT id FROM conversations WHERE title = 'VAT Rates for Services')
+              - column:
+                  name: role
+                  value: USER
+              - column:
+                  name: content
+                  value: What VAT rates apply to consulting services provided to EU clients?
+              - column:
+                  name: token_count
+                  valueNumeric: 13
+        - insert:
+            tableName: messages
+            columns:
+              - column:
+                  name: conversation_id
+                  valueComputed: (SELECT id FROM conversations WHERE title = 'VAT Rates for Services')
+              - column:
+                  name: role
+                  value: ASSISTANT
+              - column:
+                  name: content
+                  value: >-
+                    Based on the EU VAT Directive documentation, here is how VAT applies to consulting services:
+
+                    **B2B Consulting Services (Business to Business):**
+                    - The reverse charge mechanism applies when the recipient is a VAT-registered business in another EU member state
+                    - No VAT is charged by the supplier; the recipient accounts for VAT in their own country
+                    - The invoice must state "reverse charge" and include the recipient's VAT number
+
+                    **B2C Consulting Services (Business to Consumer):**
+                    - VAT is charged at the rate applicable in the supplier's country
+                    - The standard rate applies (minimum 15% across EU)
+                    - Reduced rates generally do NOT apply to consulting services
+
+                    **Standard VAT Rates by Country (2026):**
+                    - Germany: 19%
+                    - France: 20%
+                    - Netherlands: 21%
+                    - Ireland: 23%
+                    - Spain: 21%
+
+                    Would you like more information about cross-border invoicing requirements?
+              - column:
+                  name: token_count
+                  valueNumeric: 165
+
+  - changeSet:
+      id: V008-11
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: BANK
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-10
+              - column:
+                  name: description
+                  value: Starbucks - Office Coffee Run
+              - column:
+                  name: amount
+                  valueNumeric: -15.00
+              - column:
+                  name: reference
+                  value: BNK-2026-001
+              - column:
+                  name: match_status
+                  value: MATCHED
+              - column:
+                  name: match_score
+                  valueNumeric: 98.00
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: ACCOUNTING
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-10
+              - column:
+                  name: description
+                  value: Starbucks - Office Coffee Run
+              - column:
+                  name: amount
+                  valueNumeric: -15.00
+              - column:
+                  name: reference
+                  value: ACC-2026-001
+              - column:
+                  name: matched_entry_id
+                  valueNumeric: 1
+              - column:
+                  name: match_status
+                  value: MATCHED
+              - column:
+                  name: match_score
+                  valueNumeric: 98.00
+              - column:
+                  name: amount_difference
+                  valueNumeric: 0.00
+              - column:
+                  name: date_difference_days
+                  valueNumeric: 0
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: BANK
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-15
+              - column:
+                  name: description
+                  value: Client Payment - Q1 Consulting
+              - column:
+                  name: amount
+                  valueNumeric: 15000.00
+              - column:
+                  name: reference
+                  value: BNK-2026-002
+              - column:
+                  name: match_status
+                  value: MATCHED
+              - column:
+                  name: match_score
+                  valueNumeric: 99.00
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: ACCOUNTING
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-15
+              - column:
+                  name: description
+                  value: Client Payment - Q1 Consulting
+              - column:
+                  name: amount
+                  valueNumeric: 15000.00
+              - column:
+                  name: reference
+                  value: ACC-2026-002
+              - column:
+                  name: matched_entry_id
+                  valueNumeric: 3
+              - column:
+                  name: match_status
+                  value: MATCHED
+              - column:
+                  name: match_score
+                  valueNumeric: 99.00
+              - column:
+                  name: amount_difference
+                  valueNumeric: 0.00
+              - column:
+                  name: date_difference_days
+                  valueNumeric: 0
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: BANK
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-18
+              - column:
+                  name: description
+                  value: Slack Technologies Inc. Subscription
+              - column:
+                  name: amount
+                  valueNumeric: -85.00
+              - column:
+                  name: reference
+                  value: BNK-2026-003
+              - column:
+                  name: match_status
+                  value: MATCHED
+              - column:
+                  name: match_score
+                  valueNumeric: 95.00
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: ACCOUNTING
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-18
+              - column:
+                  name: description
+                  value: Slack Subscription
+              - column:
+                  name: amount
+                  valueNumeric: -85.00
+              - column:
+                  name: reference
+                  value: ACC-2026-003
+              - column:
+                  name: matched_entry_id
+                  valueNumeric: 5
+              - column:
+                  name: match_status
+                  value: MATCHED
+              - column:
+                  name: match_score
+                  valueNumeric: 95.00
+              - column:
+                  name: amount_difference
+                  valueNumeric: 0.00
+              - column:
+                  name: date_difference_days
+                  valueNumeric: 0
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: BANK
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-22
+              - column:
+                  name: description
+                  value: WeWork Office Rent - January
+              - column:
+                  name: amount
+                  valueNumeric: -3200.00
+              - column:
+                  name: reference
+                  value: BNK-2026-004
+              - column:
+                  name: match_status
+                  value: NEEDS_REVIEW
+              - column:
+                  name: match_score
+                  valueNumeric: 72.00
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: ACCOUNTING
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-22
+              - column:
+                  name: description
+                  value: Office Rent - January
+              - column:
+                  name: amount
+                  valueNumeric: -3150.00
+              - column:
+                  name: reference
+                  value: ACC-2026-004
+              - column:
+                  name: matched_entry_id
+                  valueNumeric: 7
+              - column:
+                  name: match_status
+                  value: NEEDS_REVIEW
+              - column:
+                  name: match_score
+                  valueNumeric: 72.00
+              - column:
+                  name: amount_difference
+                  valueNumeric: 50.00
+              - column:
+                  name: date_difference_days
+                  valueNumeric: 1
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: BANK
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-25
+              - column:
+                  name: description
+                  value: AWS Cloud Services - Monthly
+              - column:
+                  name: amount
+                  valueNumeric: -450.00
+              - column:
+                  name: reference
+                  value: BNK-2026-005
+              - column:
+                  name: match_status
+                  value: UNMATCHED
+        - insert:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: reconciliation_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+              - column:
+                  name: source
+                  value: ACCOUNTING
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-01-14
+              - column:
+                  name: description
+                  value: Microsoft 365 Business Subscription
+              - column:
+                  name: amount
+                  valueNumeric: -120.00
+              - column:
+                  name: reference
+                  value: ACC-2026-005
+              - column:
+                  name: match_status
+                  value: UNMATCHED
+
+  - changeSet:
+      id: V008-12
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: audit_logs
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: action
+                  value: INVOICE_APPROVED
+              - column:
+                  name: entity_type
+                  value: INVOICE
+              - column:
+                  name: entity_id
+                  valueComputed: (SELECT id FROM invoices WHERE invoice_number = 'INV-2026-001')
+        - insert:
+            tableName: audit_logs
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: action
+                  value: TRANSACTION_IMPORTED
+              - column:
+                  name: entity_type
+                  value: TRANSACTION
+              - column:
+                  name: entity_id
+                  value: 1
+        - insert:
+            tableName: audit_logs
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: action
+                  value: RECONCILIATION_STARTED
+              - column:
+                  name: entity_type
+                  value: RECONCILIATION
+              - column:
+                  name: entity_id
+                  valueComputed: (SELECT id FROM reconciliations WHERE title = 'January 2026 Bank Reconciliation')
+        - insert:
+            tableName: audit_logs
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+              - column:
+                  name: action
+                  value: LOGIN
+              - column:
+                  name: entity_type
+                  value: USER
+              - column:
+                  name: entity_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'admin@finlyhub.com')
+
+  - changeSet:
+      id: V008-13
+      author: finlyhub
+      context: demo
+      changes:
+        - insert:
+            tableName: invoices
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: invoice_number
+                  value: INV-2026-004
+              - column:
+                  name: vendor_name
+                  value: Deloitte Consulting
+              - column:
+                  name: invoice_date
+                  valueDate: 2026-02-05
+              - column:
+                  name: due_date
+                  valueDate: 2026-03-07
+              - column:
+                  name: currency
+                  value: USD
+              - column:
+                  name: subtotal
+                  valueNumeric: 5500.00
+              - column:
+                  name: tax_amount
+                  valueNumeric: 550.00
+              - column:
+                  name: total_amount
+                  valueNumeric: 6050.00
+              - column:
+                  name: status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 94.20
+        - insert:
+            tableName: invoices
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: invoice_number
+                  value: INV-2026-005
+              - column:
+                  name: vendor_name
+                  value: Adobe Inc.
+              - column:
+                  name: invoice_date
+                  valueDate: 2026-02-10
+              - column:
+                  name: due_date
+                  valueDate: 2026-03-12
+              - column:
+                  name: currency
+                  value: USD
+              - column:
+                  name: subtotal
+                  valueNumeric: 599.99
+              - column:
+                  name: tax_amount
+                  valueNumeric: 60.00
+              - column:
+                  name: total_amount
+                  valueNumeric: 659.99
+              - column:
+                  name: status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 96.80
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: category_id
+                  valueComputed: (SELECT id FROM transaction_categories WHERE name = 'Transportation')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-02-03
+              - column:
+                  name: description
+                  value: Lyft - Client Site Visit
+              - column:
+                  name: amount
+                  valueNumeric: -45.00
+              - column:
+                  name: vendor
+                  value: Lyft
+              - column:
+                  name: categorization_status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 96.00
+              - column:
+                  name: user_approved
+                  valueBoolean: true
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: category_id
+                  valueComputed: (SELECT id FROM transaction_categories WHERE name = 'Software & Subscriptions')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-02-07
+              - column:
+                  name: description
+                  value: QuickBooks Online Subscription
+              - column:
+                  name: amount
+                  valueNumeric: -75.00
+              - column:
+                  name: vendor
+                  value: Intuit
+              - column:
+                  name: categorization_status
+                  value: APPROVED
+              - column:
+                  name: confidence_score
+                  valueNumeric: 98.00
+              - column:
+                  name: user_approved
+                  valueBoolean: true
+        - insert:
+            tableName: transactions
+            columns:
+              - column:
+                  name: user_id
+                  valueComputed: (SELECT id FROM users WHERE email = 'accountant@finlyhub.com')
+              - column:
+                  name: transaction_date
+                  valueDate: 2026-02-12
+              - column:
+                  name: description
+                  value: Office Depot - Supplies
+              - column:
+                  name: amount
+                  valueNumeric: -235.50
+              - column:
+                  name: vendor
+                  value: Office Depot
+              - column:
+                  name: categorization_status
+                  value: PENDING
+              - column:
+                  name: confidence_score
+                  valueNumeric: 82.00

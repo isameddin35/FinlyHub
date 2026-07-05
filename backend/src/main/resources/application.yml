@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: finlyhub
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finlyhub}
+    username: ${SPRING_DATASOURCE_USERNAME:finlyhub}
+    password: ${SPRING_DATASOURCE_PASSWORD:finlyhub_secret_2026}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+jwt:
+  secret: ${JWT_SECRET:ZHZlcmZhc3RseXNhZmUyNWhlYXZ5bHlvdXJ0b3VnaHRsb25nMTAyNA==}
+  expiration: ${JWT_EXPIRATION:86400000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+app:
+  upload:
+    dir: ${APP_UPLOAD_DIR:uploads}
+
+ai:
+  provider: ${AI_PROVIDER:mock}
+  openai:
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-4o}
+    embedding-model: ${OPENAI_EMBEDDING_MODEL:nomic-embed-text}
+
+logging:
+  level:
+    com.finlyhub: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO

@@ -1,0 +1,7 @@
+spring:
+  liquibase:
+    contexts: demo
+
+logging:
+  level:
+    com.finlyhub: INFO

@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: V012-1
+      author: finlyhub
+      changes:
+        - dropNotNullConstraint:
+            tableName: invoices
+            columnName: total_amount
+            columnDataType: DECIMAL(15, 2)

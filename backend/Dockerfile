@@ -1,0 +1,14 @@
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:resolve -B
+COPY src ./src
+RUN mvn package -DskipTests -B
+
+FROM eclipse-temurin:21-jre-alpine
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-eng
+ENV TESSDATA_PREFIX=/usr/share/tessdata
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

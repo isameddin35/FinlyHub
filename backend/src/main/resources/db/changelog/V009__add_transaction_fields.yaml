@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: V009-1
+      author: finlyhub
+      changes:
+        - addColumn:
+            tableName: transactions
+            columns:
+              - column:
+                  name: department
+                  type: VARCHAR(100)
+              - column:
+                  name: transaction_type
+                  type: VARCHAR(10)
+  - changeSet:
+      id: V009-2
+      author: finlyhub
+      changes:
+        - addColumn:
+            tableName: transactions
+            columns:
+              - column:
+                  name: suggested_category_id_value
+                  type: BIGINT

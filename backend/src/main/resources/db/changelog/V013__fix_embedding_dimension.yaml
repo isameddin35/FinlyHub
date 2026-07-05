@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: V013-1
+      author: finlyhub
+      changes:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_chunks_embedding
+
+  - changeSet:
+      id: V013-2
+      author: finlyhub
+      changes:
+        - delete:
+            tableName: document_chunks
+
+  - changeSet:
+      id: V013-3
+      author: finlyhub
+      changes:
+        - sql:
+            sql: ALTER TABLE document_chunks ALTER COLUMN embedding TYPE vector(768)
+
+  - changeSet:
+      id: V013-4
+      author: finlyhub
+      changes:
+        - sql:
+            sql: CREATE INDEX idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)

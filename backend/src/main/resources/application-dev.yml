@@ -1,0 +1,13 @@
+spring:
+  jpa:
+    show-sql: true
+  liquibase:
+    contexts: dev
+
+logging:
+  level:
+    com.finlyhub: DEBUG
+    org.springframework.security: DEBUG
+
+ai:
+  provider: mock

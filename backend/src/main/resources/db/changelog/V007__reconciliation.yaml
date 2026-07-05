@@ -1,0 +1,292 @@
+databaseChangeLog:
+  - changeSet:
+      id: V007-1
+      author: finlyhub
+      changes:
+        - createTable:
+            tableName: reconciliations
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_recon_user
+                    references: users(id)
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  defaultValue: IN_PROGRESS
+              - column:
+                  name: bank_statement_path
+                  type: VARCHAR(1000)
+              - column:
+                  name: accounting_data_path
+                  type: VARCHAR(1000)
+              - column:
+                  name: period_start
+                  type: DATE
+              - column:
+                  name: period_end
+                  type: DATE
+              - column:
+                  name: total_bank_transactions
+                  type: INTEGER
+                  defaultValue: 0
+              - column:
+                  name: total_accounting_transactions
+                  type: INTEGER
+                  defaultValue: 0
+              - column:
+                  name: matched_count
+                  type: INTEGER
+                  defaultValue: 0
+              - column:
+                  name: unmatched_count
+                  type: INTEGER
+                  defaultValue: 0
+              - column:
+                  name: needs_review_count
+                  type: INTEGER
+                  defaultValue: 0
+              - column:
+                  name: discrepancy_amount
+                  type: DECIMAL(15, 2)
+                  defaultValue: 0
+              - column:
+                  name: approved_by
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_recon_approver
+                    references: users(id)
+              - column:
+                  name: approved_at
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+        - createTable:
+            tableName: reconciliation_entries
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: reconciliation_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_recon_entries
+                    references: reconciliations(id)
+              - column:
+                  name: source
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: transaction_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: VARCHAR(500)
+              - column:
+                  name: amount
+                  type: DECIMAL(15, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reference
+                  type: VARCHAR(255)
+              - column:
+                  name: matched_entry_id
+                  type: BIGINT
+              - column:
+                  name: match_status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: match_score
+                  type: DECIMAL(5, 2)
+              - column:
+                  name: match_evidence
+                  type: JSONB
+              - column:
+                  name: amount_difference
+                  type: DECIMAL(15, 2)
+              - column:
+                  name: date_difference_days
+                  type: INTEGER
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+  - changeSet:
+      id: V007-2
+      author: finlyhub
+      changes:
+        - createIndex:
+            tableName: reconciliations
+            indexName: idx_recon_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: reconciliations
+            indexName: idx_recon_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: reconciliation_entries
+            indexName: idx_recon_entries_recon
+            columns:
+              - column:
+                  name: reconciliation_id
+        - createIndex:
+            tableName: reconciliation_entries
+            indexName: idx_recon_entries_status
+            columns:
+              - column:
+                  name: match_status
+
+  - changeSet:
+      id: V007-3
+      author: finlyhub
+      changes:
+        - createTable:
+            tableName: audit_logs
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: action
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: entity_type
+                  type: VARCHAR(100)
+              - column:
+                  name: entity_id
+                  type: BIGINT
+              - column:
+                  name: old_values
+                  type: JSONB
+              - column:
+                  name: new_values
+                  type: JSONB
+              - column:
+                  name: ip_address
+                  type: VARCHAR(45)
+              - column:
+                  name: user_agent
+                  type: VARCHAR(500)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+        - createTable:
+            tableName: notifications
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_notifications_user
+                    references: users(id)
+              - column:
+                  name: type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: message
+                  type: TEXT
+              - column:
+                  name: data
+                  type: JSONB
+              - column:
+                  name: read
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: NOW()
+
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_entity
+            columns:
+              - column:
+                  name: entity_type
+              - column:
+                  name: entity_id
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_action
+            columns:
+              - column:
+                  name: action
+        - createIndex:
+            tableName: notifications
+            indexName: idx_notif_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: notifications
+            indexName: idx_notif_read
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: read
