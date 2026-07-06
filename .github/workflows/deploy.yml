@@ -20,7 +20,7 @@ jobs:
       - name: Deploy via SSM
         run: |
           INSTANCE_ID=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=finlyhub-prod" \
+            --filters "Name=tag:Name,Values=finlyhub" \
             --query "Reservations[0].Instances[0].InstanceId" \
             --output text)
 
