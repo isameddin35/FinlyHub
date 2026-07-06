@@ -18,6 +18,7 @@ target/
 application-local.yml
 
 uploads/
+*.tsbuildinfo
 deploy/terraform/.terraform/
 *.tfstate
 *.tfstate.backup

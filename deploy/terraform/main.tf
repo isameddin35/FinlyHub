@@ -51,7 +51,12 @@ resource "aws_iam_role" "finlyhub" {
   tags               = { Name = "${var.project_name}-ec2-role" }
 }
 
-resource "aws_iam_role_policy_attachment" "ssm" {
+resource "aws_iam_role_policy_attachment" "ssm_managed" {
+  role       = aws_iam_role.finlyhub.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_readonly" {
   role       = aws_iam_role.finlyhub.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess"
 }
