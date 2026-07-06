@@ -37,7 +37,7 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       OPENAI_BASE_URL: http://ollama:11434/v1
       OPENAI_API_KEY: ollama
-      OPENAI_MODEL: qwen2:1.5b
+      OPENAI_MODEL: qwen2:0.5b
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-nomic-embed-text}
       APP_UPLOAD_DIR: /app/uploads
     volumes:
@@ -61,7 +61,7 @@ services:
       sh -c '
         ollama serve &
         until ollama list > /dev/null 2>&1; do sleep 1; done &&
-        ollama pull qwen2:1.5b &&
+        ollama pull qwen2:0.5b &&
         ollama pull nomic-embed-text &&
         wait
       '
