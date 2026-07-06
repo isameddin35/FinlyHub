@@ -99,7 +99,7 @@ JWT_REFRESH_EXPIRATION=604800000
 AI_PROVIDER=openai
 OPENAI_BASE_URL=http://ollama:11434/v1
 OPENAI_API_KEY=ollama
-OPENAI_MODEL=qwen2:0.5b
+OPENAI_MODEL=qwen2:1.5b
 OPENAI_EMBEDDING_MODEL=nomic-embed-text
 
 # Frontend
@@ -114,8 +114,8 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 log "Waiting for services to become healthy..."
 sleep 10
 
-# Remove old model if present (qwen2:0.5b is lighter, keep both during transition)
-docker exec finlyhub-ollama ollama rm qwen2:1.5b 2>/dev/null && log "Removed old qwen2:1.5b model" || true
+# Clean up qwen2:0.5b if it was partially pulled during a failed transition
+docker exec finlyhub-ollama ollama rm qwen2:0.5b 2>/dev/null && log "Cleaned up partial qwen2:0.5b pull" || true
 
 RUNNING=$(docker compose ps --services --filter "status=running" | wc -l)
 TOTAL=$(docker compose ps --services | wc -l)
