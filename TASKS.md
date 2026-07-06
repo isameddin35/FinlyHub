@@ -78,16 +78,11 @@
 
 - [-] **`searchSimilarChunks()` is a stub** — Returns `List.of()`, never called
 - [-] **`/uploads/**` exposed without auth** — `WebConfig` serves files as static resources
-- [-] **No SSE streaming for chatbot** — Synchronous request/response, up to 15s wait
-- [-] **No `.env` for frontend build-time VITE_API_URL** — Currently falls back to `/api` via nginx proxy
 
 ## Future Enhancements
 
-- [ ] **SSE chatbot streaming** — Token-by-token AI responses via `SseEmitter`
 - [ ] **Production deployment guide** — SSL, domain, CORS for non-localhost
 - [ ] **Test suite** — Backend (JUnit 5 + Testcontainers), Frontend (Vitest + Playwright)
-- [ ] **CI/CD pipeline** — GitHub Actions (build, test, deploy)
-- [ ] **Real dashboard trends** — Query actual transaction data by month
 - [ ] **Multi-tenancy** — Company-scoped data isolation
 - [ ] **File download endpoint** — Authenticated `GET /api/documents/{id}/download`
 - [ ] **SSO / OAuth2** — Google/Microsoft login

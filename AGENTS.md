@@ -126,6 +126,13 @@ finlyhub/
 
 ---
 
+## CI/CD Pipeline
+
+- **GitHub Actions** — `.github/workflows/deploy.yml` triggers on push to `main`
+- **Deploy**: SSH into EC2 via `appleboy/ssh-action`, runs `git pull && docker compose up -d --build`
+- **Secrets** stored in GitHub repo: `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY`
+- **Secrets for production** (JWT, DB password) stored in AWS SSM Parameter Store, fetched by `deploy/deploy.sh`
+
 ## Testing
 
 - **No tests exist yet.** The project was built for a demo, not production.
