@@ -57,16 +57,20 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     entrypoint: ""
+    environment:
+      OLLAMA_KEEP_ALIVE: -1
     command: >
       sh -c '
         ollama serve &
-        until ollama list > /dev/null 2>&1; do sleep 1; done &&
-        ollama pull qwen2:0.5b &&
-        ollama pull nomic-embed-text &&
+        until ollama list > /dev/null 2>&1; do sleep 1; done
+        for i in 1 2 3; do
+          ollama pull qwen2:0.5b && break || sleep 5
+        done
+        ollama pull nomic-embed-text || true
         wait
       '
     healthcheck:
-      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q qwen2:0.5b"]
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -qE 'qwen2:0\\.5b|qwen2:1\\.5b'"]
       interval: 10s
       timeout: 10s
       retries: 60

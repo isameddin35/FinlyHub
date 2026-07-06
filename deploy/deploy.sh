@@ -114,9 +114,8 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 log "Waiting for services to become healthy..."
 sleep 10
 
-# Remove old model to free disk space
-log "Removing old qwen2:1.5b model..."
-docker exec finlyhub-ollama ollama rm qwen2:1.5b 2>/dev/null || true
+# Remove old model if present (qwen2:0.5b is lighter, keep both during transition)
+docker exec finlyhub-ollama ollama rm qwen2:1.5b 2>/dev/null && log "Removed old qwen2:1.5b model" || true
 
 RUNNING=$(docker compose ps --services --filter "status=running" | wc -l)
 TOTAL=$(docker compose ps --services | wc -l)
