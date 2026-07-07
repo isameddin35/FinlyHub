@@ -113,7 +113,7 @@ EOF
 # --- Start services ---
 log "Starting services with docker compose..."
 cd "$PROJECT_DIR"
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
 
 log "Waiting for services to become healthy..."
 sleep 10
