@@ -63,7 +63,6 @@ public class ChatbotService {
         userMessage.setConversation(conversation);
         userMessage.setRole(Message.Role.USER);
         userMessage.setContent(message);
-        messageRepository.save(userMessage);
 
         List<SourceDocument> relevantDocs = searchRelevantDocuments(message);
 
@@ -77,6 +76,8 @@ public class ChatbotService {
                 .conversationHistory(historyStrings)
                 .relevantDocuments(relevantDocs)
                 .build();
+
+        messageRepository.save(userMessage);
 
         ChatResponse chatResponse = aiService.chat(chatRequest);
 
@@ -117,7 +118,6 @@ public class ChatbotService {
         userMessage.setConversation(conversation);
         userMessage.setRole(Message.Role.USER);
         userMessage.setContent(message);
-        messageRepository.save(userMessage);
 
         List<SourceDocument> relevantDocs = searchRelevantDocuments(message);
 
@@ -131,6 +131,8 @@ public class ChatbotService {
                 .conversationHistory(historyStrings)
                 .relevantDocuments(relevantDocs)
                 .build();
+
+        messageRepository.save(userMessage);
 
         SseEmitter emitter = new SseEmitter(300000L);
 
@@ -201,7 +203,7 @@ public class ChatbotService {
                     .map(String::valueOf)
                     .collect(Collectors.joining(",", "[", "]"));
 
-            String sql = "SELECT id, document_id, chunk_index, content, filename FROM document_chunks ORDER BY embedding <-> cast(:embedding as vector) LIMIT 5";
+            String sql = "SELECT id, document_id, chunk_index, content, filename, 1 - (embedding <=> cast(:embedding as vector)) AS similarity FROM document_chunks ORDER BY embedding <=> cast(:embedding as vector) LIMIT 5";
 
             List<Object[]> results = entityManager.createNativeQuery(sql)
                     .setParameter("embedding", embeddingStr)
@@ -214,6 +216,7 @@ public class ChatbotService {
                         .chunkIndex(row[2] != null ? ((Number) row[2]).intValue() : null)
                         .excerpt(row[3] != null ? (String) row[3] : null)
                         .filename(row[4] != null ? (String) row[4] : null)
+                        .relevanceScore(row[5] != null ? ((Number) row[5]).doubleValue() : null)
                         .build();
                 docs.add(doc);
             }

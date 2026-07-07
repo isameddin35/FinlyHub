@@ -35,10 +35,12 @@ services:
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       AI_PROVIDER: ${AI_PROVIDER:-openai}
-      OPENAI_BASE_URL: http://ollama:11434/v1
-      OPENAI_API_KEY: ollama
-      OPENAI_MODEL: qwen2:1.5b
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.groq.com/openai/v1}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-llama-3.1-8b-instant}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-nomic-embed-text}
+      OPENAI_EMBEDDING_BASE_URL: ${OPENAI_EMBEDDING_BASE_URL:-http://ollama:11434/v1}
+      OPENAI_EMBEDDING_API_KEY: ${OPENAI_EMBEDDING_API_KEY:-ollama}
       APP_UPLOAD_DIR: /app/uploads
     volumes:
       - uploads:/app/uploads
@@ -63,12 +65,11 @@ services:
       sh -c '
         ollama serve &
         until ollama list > /dev/null 2>&1; do sleep 1; done
-        ollama pull qwen2:1.5b || true
         ollama pull nomic-embed-text || true
         wait
       '
     healthcheck:
-      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q qwen2:1.5b"]
+      test: ["CMD-SHELL", "ollama list 2>/dev/null | grep -q nomic-embed-text"]
       interval: 10s
       timeout: 10s
       retries: 60

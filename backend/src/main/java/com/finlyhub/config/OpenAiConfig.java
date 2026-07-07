@@ -23,10 +23,16 @@ public class OpenAiConfig {
     @Value("${ai.openai.embedding-model}")
     private String embeddingModel;
 
+    @Value("${ai.openai.embedding-base-url}")
+    private String embeddingBaseUrl;
+
+    @Value("${ai.openai.embedding-api-key}")
+    private String embeddingApiKey;
+
     @Bean
     @ConditionalOnProperty(name = "ai.provider", havingValue = "openai")
     public AiService openAiService() {
-        return new OpenAiAiService(baseUrl, apiKey, model, embeddingModel);
+        return new OpenAiAiService(baseUrl, apiKey, model, embeddingModel, embeddingBaseUrl, embeddingApiKey);
     }
 
     @Bean

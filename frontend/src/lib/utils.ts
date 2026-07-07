@@ -5,11 +5,34 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+const SYMBOL_TO_ISO: Record<string, string> = {
+  '$': 'USD',
+  '€': 'EUR',
+  '£': 'GBP',
+  '¥': 'JPY',
+  '₩': 'KRW',
+  '₽': 'RUB',
+  '₹': 'INR',
+  '₪': 'ILS',
+  '₫': 'VND',
+  '₱': 'PHP',
+  '₴': 'UAH',
+  '₦': 'NGN',
+}
+
 export function formatCurrency(amount: number, currency = 'USD'): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount)
+  const iso = SYMBOL_TO_ISO[currency] ?? currency
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: iso,
+    }).format(amount)
+  } catch {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount)
+  }
 }
 
 export function formatDate(date: string | Date): string {

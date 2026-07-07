@@ -25,7 +25,7 @@ export function CopilotPage() {
   const [input, setInput] = useState('')
   const [streamingContent, setStreamingContent] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [optimisticMessages, setOptimisticMessages] = useState<MessageResponse[]>([])
+  const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -78,23 +78,14 @@ export function CopilotPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingContent, optimisticMessages])
+  }, [messages, streamingContent, pendingUserMessage])
 
   const handleSend = useCallback((messageText?: string) => {
     const msg = (messageText ?? input).trim()
     if (!msg || !activeConversationId || isStreaming) return
     setInput('')
 
-    const optimisticUser: MessageResponse = {
-      id: Date.now(),
-      conversationId: activeConversationId,
-      role: 'user',
-      content: msg,
-      sources: null,
-      confidenceScore: null,
-      createdAt: new Date().toISOString(),
-    }
-    setOptimisticMessages((prev) => [...prev, optimisticUser])
+    setPendingUserMessage(msg)
     setIsStreaming(true)
     setStreamingContent('')
 
@@ -104,9 +95,9 @@ export function CopilotPage() {
       (token) => {
         setStreamingContent((prev) => prev + token)
       },
-      (response) => {
+      () => {
         setIsStreaming(false)
-        setOptimisticMessages((prev) => [...prev, response])
+        setPendingUserMessage(null)
         setStreamingContent('')
         queryClient.invalidateQueries({ queryKey: ['messages', activeConversationId] })
         queryClient.invalidateQueries({ queryKey: ['conversations'] })
@@ -114,7 +105,7 @@ export function CopilotPage() {
       () => {
         setIsStreaming(false)
         setStreamingContent('')
-        setOptimisticMessages([])
+        setPendingUserMessage(null)
         toast.error('Failed to get response')
       },
     )
@@ -126,7 +117,7 @@ export function CopilotPage() {
     abortRef.current?.abort()
     setIsStreaming(false)
     setStreamingContent('')
-    setOptimisticMessages([])
+    setPendingUserMessage(null)
     queryClient.invalidateQueries({ queryKey: ['messages', activeConversationId] })
   }
 
@@ -156,21 +147,21 @@ export function CopilotPage() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  const allMessages = [...optimisticMessages, ...messages]
+  const allMessages = messages
 
   const renderMessage = (msg: MessageResponse) => (
     <div key={msg.id}>
-      <div className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-        {msg.role !== 'user' && (
+      <div className={`flex gap-3 ${msg.role.toLowerCase() === 'user' ? 'flex-row-reverse' : ''}`}>
+        {msg.role.toLowerCase() !== 'user' && (
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
             <Bot className="h-4 w-4 text-primary" />
           </div>
         )}
 
-        <div className={`max-w-[75%] ${msg.role === 'user' ? 'text-right' : ''}`}>
+        <div className={`max-w-[75%] ${msg.role.toLowerCase() === 'user' ? 'text-right' : ''}`}>
           <div
             className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-              msg.role === 'user'
+              msg.role.toLowerCase() === 'user'
                 ? 'bg-primary/10 text-foreground rounded-tr-sm'
                 : 'bg-muted text-foreground rounded-tl-sm'
             }`}
@@ -322,6 +313,16 @@ export function CopilotPage() {
                   </div>
                 ) : (
                   allMessages.map(renderMessage)
+                )}
+
+                {isStreaming && pendingUserMessage && (
+                  <div key="pending-user" className="flex gap-3 flex-row-reverse">
+                    <div
+                      className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-primary/10 text-foreground rounded-tr-sm max-w-[75%]"
+                    >
+                      {pendingUserMessage}
+                    </div>
+                  </div>
                 )}
 
                 {isStreaming && (

@@ -16,6 +16,8 @@ import io.reactivex.Flowable;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
+import okhttp3.HttpUrl;
+import okhttp3.Request;
 import org.springframework.beans.factory.annotation.Value;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
@@ -24,28 +26,33 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Consumer;
 
 @Slf4j
 public class OpenAiAiService implements AiService {
 
     private OpenAiService openAiService;
+    private OpenAiService embeddingOpenAiService;
     private final String apiKey;
     private final String baseUrl;
     private final String model;
     private final String embeddingModel;
+    private final String embeddingBaseUrl;
+    private final String embeddingApiKey;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final Random RANDOM = new Random();
 
     public OpenAiAiService(String baseUrl,
                             String apiKey,
                             @Value("${ai.openai.model}") String model,
-                            @Value("${ai.openai.embedding-model}") String embeddingModel) {
+                            @Value("${ai.openai.embedding-model}") String embeddingModel,
+                            @Value("${ai.openai.embedding-base-url}") String embeddingBaseUrl,
+                            @Value("${ai.openai.embedding-api-key}") String embeddingApiKey) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.model = model;
         this.embeddingModel = embeddingModel;
+        this.embeddingBaseUrl = embeddingBaseUrl;
+        this.embeddingApiKey = embeddingApiKey;
     }
 
     @PostConstruct
@@ -56,6 +63,16 @@ public class OpenAiAiService implements AiService {
                 .connectTimeout(Duration.ofSeconds(60))
                 .readTimeout(Duration.ofSeconds(300))
                 .writeTimeout(Duration.ofSeconds(300))
+                .addInterceptor(chain -> {
+                    Request request = chain.request();
+                    HttpUrl url = request.url();
+                    String path = url.encodedPath();
+                    if (path.startsWith("/v1/")) {
+                        url = url.newBuilder().encodedPath("/openai" + path).build();
+                        request = request.newBuilder().url(url).build();
+                    }
+                    return chain.proceed(request);
+                })
                 .build();
 
         Retrofit retrofit = new Retrofit.Builder()
@@ -67,6 +84,23 @@ public class OpenAiAiService implements AiService {
 
         OpenAiApi api = retrofit.create(OpenAiApi.class);
         this.openAiService = new OpenAiService(api);
+
+        OkHttpClient embeddingClient = OpenAiService.defaultClient(embeddingApiKey, Duration.ofSeconds(30))
+                .newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .readTimeout(Duration.ofSeconds(30))
+                .writeTimeout(Duration.ofSeconds(30))
+                .build();
+
+        Retrofit embeddingRetrofit = new Retrofit.Builder()
+                .baseUrl(embeddingBaseUrl.endsWith("/") ? embeddingBaseUrl : embeddingBaseUrl + "/")
+                .client(embeddingClient)
+                .addConverterFactory(JacksonConverterFactory.create(mapper))
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                .build();
+
+        OpenAiApi embeddingApi = embeddingRetrofit.create(OpenAiApi.class);
+        this.embeddingOpenAiService = new OpenAiService(embeddingApi);
     }
 
     @Override
@@ -80,6 +114,7 @@ public class OpenAiAiService implements AiService {
                 Return JSON with: invoiceNumber, vendor, vendorEmail, vendorAddress,
                 date, dueDate, subtotal, tax, vat, total, currency.
                 Use null for missing fields.
+                currency must be an ISO 4217 code (e.g., USD, EUR, GBP) — never a symbol like $, €, or £.
 
                 OCR Text:
                 """ + ocrText;
@@ -197,18 +232,14 @@ public class OpenAiAiService implements AiService {
                 .build();
 
         try {
-            List<Double> doubles = openAiService.createEmbeddings(request)
+            List<Double> doubles = embeddingOpenAiService.createEmbeddings(request)
                     .getData().get(0).getEmbedding();
             return doubles.stream()
                     .map(Double::floatValue)
                     .toList();
         } catch (Exception e) {
-            log.warn("Embedding API not available, using random fallback", e);
-            List<Float> fallback = new ArrayList<>(768);
-            for (int i = 0; i < 768; i++) {
-                fallback.add(RANDOM.nextFloat() * 2 - 1);
-            }
-            return fallback;
+            log.error("Embedding API failed, returning empty results", e);
+            return List.of();
         }
     }
 

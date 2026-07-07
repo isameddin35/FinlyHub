@@ -64,18 +64,20 @@ fetch_ssm() {
 
 JWT_SECRET=$(fetch_ssm "/finlyhub/JWT_SECRET")
 DB_PASSWORD=$(fetch_ssm "/finlyhub/DB_PASSWORD")
+OPENAI_API_KEY=$(fetch_ssm "/finlyhub/OPENAI_API_KEY")
 
 if [ -z "$JWT_SECRET" ] || [ -z "$DB_PASSWORD" ]; then
   log "WARNING: Failed to fetch secrets from SSM, generating fresh ones..."
   JWT_SECRET=$(openssl rand -base64 48 | tr -d '/=+\n\r')
   DB_PASSWORD=$(openssl rand -base64 32 | tr -d '/=+\n\r')
-  # Store them for future runs
   aws ssm put-parameter --name "/finlyhub/JWT_SECRET" --value "$JWT_SECRET" --type SecureString --overwrite 2>/dev/null || true
   aws ssm put-parameter --name "/finlyhub/DB_PASSWORD" --value "$DB_PASSWORD" --type SecureString --overwrite 2>/dev/null || true
 fi
 
-# Escape any $ signs for docker-compose .env parsing
-# Escape $ signs for docker-compose .env parsing (replace $ with $$)
+if [ -z "$OPENAI_API_KEY" ]; then
+  log "WARNING: OPENAI_API_KEY not found in SSM. Chat, extraction, and categorization will fail."
+fi
+
 JWT_SECRET="${JWT_SECRET//\$/\$\$}"
 DB_PASSWORD="${DB_PASSWORD//\$/\$\$}"
 
@@ -95,12 +97,14 @@ JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRATION=86400000
 JWT_REFRESH_EXPIRATION=604800000
 
-# AI Provider (Local Ollama - OpenAI-compatible)
+# AI Provider (Groq for chat, Ollama for embeddings)
 AI_PROVIDER=openai
-OPENAI_BASE_URL=http://ollama:11434/v1
-OPENAI_API_KEY=ollama
-OPENAI_MODEL=qwen2:1.5b
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
+OPENAI_API_KEY=${OPENAI_API_KEY}
+OPENAI_MODEL=llama-3.1-8b-instant
 OPENAI_EMBEDDING_MODEL=nomic-embed-text
+OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
+OPENAI_EMBEDDING_API_KEY=ollama
 
 # Frontend
 VITE_API_URL=/api
