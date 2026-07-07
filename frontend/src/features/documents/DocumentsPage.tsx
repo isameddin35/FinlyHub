@@ -2,34 +2,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Upload, FileText, Trash2, CheckCircle, AlertCircle, File as FileIcon } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Upload, FileText, Trash2, CheckCircle, AlertCircle, File as FileIcon, Download, Eye } from 'lucide-react'
+import { formatDate, formatBytes } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { useDropzone } from 'react-dropzone'
 import { useState } from 'react'
-import apiClient from '@/api/client'
-import type { ApiResponse } from '@/types/api'
-
-interface Document {
-  id: number
-  filename: string
-  documentType: string
-  status: 'UPLOADED' | 'INDEXED' | 'ERROR'
-  createdAt: string
-}
-
-const documentApi = {
-  upload: (file: File) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return apiClient.post<ApiResponse<Document>>('/documents/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
-  list: () => apiClient.get<ApiResponse<Document[]>>('/documents'),
-  delete: (id: number) => apiClient.delete<ApiResponse<void>>(`/documents/${id}`),
-}
+import { documentApi } from '@/api/documents'
+import type { Document } from '@/types/document'
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 
 const statusConfig: Record<Document['status'], { label: string; variant: 'secondary' | 'success' | 'destructive'; icon: typeof CheckCircle }> = {
   UPLOADED: { label: 'Uploaded', variant: 'secondary', icon: FileIcon },
@@ -54,6 +46,7 @@ function DocumentSkeleton() {
 export function DocumentsPage() {
   const queryClient = useQueryClient()
   const [uploading, setUploading] = useState(false)
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null)
 
   const { data: documentsData, isLoading, isError, error } = useQuery({
     queryKey: ['documents'],
@@ -184,20 +177,78 @@ export function DocumentsPage() {
                         <span className="uppercase">{doc.documentType}</span>
                         <span>&middot;</span>
                         <span>{formatDate(doc.createdAt)}</span>
+                        {doc.fileSize != null && (
+                          <>
+                            <span>&middot;</span>
+                            <span>{formatBytes(doc.fileSize)}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <Badge variant={status.variant} className="flex items-center gap-1">
                       <StatusIcon className="h-3 w-3" />
                       {status.label}
                     </Badge>
+                    <Dialog open={previewDoc?.id === doc.id} onOpenChange={(open) => { if (!open) setPreviewDoc(null) }}>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => setPreviewDoc(doc)}>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl h-[80vh]">
+                        <DialogHeader>
+                          <DialogTitle>{doc.filename}</DialogTitle>
+                        </DialogHeader>
+                        <div className="flex-1 h-full min-h-0">
+                          {doc.contentType === 'application/pdf' ? (
+                            <iframe
+                              src={`/api/documents/${doc.id}/download`}
+                              className="w-full h-full rounded border"
+                              title={doc.filename}
+                            />
+                          ) : (
+                            <iframe
+                              src={`/api/documents/${doc.id}/download`}
+                              className="w-full h-full rounded border"
+                              title={doc.filename}
+                            />
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => deleteMutation.mutate(doc.id)}
-                      disabled={deleteMutation.isPending}
+                      onClick={() => {
+                        const a = document.createElement('a')
+                        a.href = `/api/documents/${doc.id}/download`
+                        a.download = doc.filename
+                        a.click()
+                      }}
                     >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      <Download className="h-4 w-4 text-muted-foreground" />
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" disabled={deleteMutation.isPending}>
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete document?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete "{doc.filename}" and its indexed content.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteMutation.mutate(doc.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 )
               })}

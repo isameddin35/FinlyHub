@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   FileText,
@@ -10,16 +10,20 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useState } from 'react'
 import { useRoleLabels } from '@/hooks/useRoleLabels'
+import { useAuth } from '@/hooks/useAuth'
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
+  const navigate = useNavigate()
   const labels = useRoleLabels()
+  const { logout } = useAuth()
 
   const navItems = [
     { to: '/dashboard', label: labels.dashboard, icon: LayoutDashboard },
@@ -76,6 +80,17 @@ export function Sidebar() {
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </Button>
+      </div>
+      <div className="p-2 pt-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          onClick={() => { logout(); navigate('/role-select') }}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span className="ml-3">Log out</span>}
         </Button>
       </div>
     </aside>

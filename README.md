@@ -16,8 +16,10 @@ Modern, enterprise-grade SaaS platform that helps accountants automate repetitiv
 |-------|-----------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query, Recharts |
 | Backend | Java 21, Spring Boot 3.4, Spring Security, JWT, Spring Data JPA |
-| Database | PostgreSQL 16 + pgvector |
-| AI | Pluggable (OpenAI or Mock), OCR via Tesseract |
+| Database | PostgreSQL 16 + pgvector (768-dim, ivfflat index) |
+| AI Chat | Groq (groq-sdk, llama-3.1-8b-instant) |
+| AI Embeddings | Ollama (nomic-embed-text, 768-dim) |
+| OCR | Tesseract via Tess4J 5.12 |
 | Infrastructure | Docker, Docker Compose |
 
 ## Quick Start
@@ -69,18 +71,22 @@ The default configuration uses `AI_PROVIDER=mock` — no API key required. The a
 
 | Email | Role |
 |-------|------|
-| admin@finlyhub.com | Admin |
+| admin@finlyhub.com | Owner |
 | accountant@finlyhub.com | Accountant |
 | viewer@finlyhub.com | Viewer |
 
-### Production Mode
+### Production Mode (with Groq + Ollama)
 
 ```bash
-# Set your OpenAI API key
-export OPENAI_API_KEY=sk-your-key
+# Set your Groq API key
+export OPENAI_API_KEY=gsk-your-groq-api-key
+export OPENAI_BASE_URL=https://api.groq.com/openai/v1
+export OPENAI_MODEL=llama-3.1-8b-instant
+export OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
+export OPENAI_EMBEDDING_API_KEY=sk-ollama
 export AI_PROVIDER=openai
 
-# Start with production profile
+# Ensure Ollama is running with nomic-embed-text
 docker compose up --build
 ```
 
@@ -92,8 +98,13 @@ See `.env.example` for all configurable variables. Key ones:
 |----------|---------|-------------|
 | `POSTGRES_DB` | finlyhub | Database name |
 | `JWT_SECRET` | (required) | Base64-encoded 256+ bit secret |
-| `AI_PROVIDER` | mock | `mock` or `openai` |
-| `OPENAI_API_KEY` | - | Required if provider is `openai` |
+| `AI_PROVIDER` | mock | `mock` (no key) or `openai` (Groq chat + Ollama embeddings) |
+| `OPENAI_API_KEY` | - | Groq API key (if provider is `openai`) |
+| `OPENAI_BASE_URL` | https://api.groq.com/openai/v1 | Groq-compatible API base URL |
+| `OPENAI_MODEL` | llama-3.1-8b-instant | Chat model |
+| `OPENAI_EMBEDDING_BASE_URL` | http://ollama:11434/v1 | Ollama embeddings endpoint |
+| `OPENAI_EMBEDDING_API_KEY` | sk-ollama | Dummy key for Ollama |
+| `OPENAI_EMBEDDING_MODEL` | nomic-embed-text | Embedding model (768-dim output) |
 
 ## Project Structure
 
@@ -126,6 +137,9 @@ finlyhub/
 │   ├── package.json
 │   └── vite.config.ts
 ├── docker-compose.yml
+├── deploy/
+│   ├── deploy.sh              # EC2 deployment script (SSM → git pull + compose)
+│   └── docker-compose.prod.yml
 └── .env.example
 ```
 
@@ -145,14 +159,24 @@ finlyhub/
 | GET | `/api/invoices` | List user's invoices |
 | GET | `/api/invoices/{id}` | Get invoice details |
 | PUT | `/api/invoices/{id}/approve` | Approve with corrections |
+| GET | `/api/invoices/export` | Export approved invoices as Excel (.xlsx) |
 
 ### Accounting Copilot
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/chat/conversations` | Create conversation |
 | GET | `/api/chat/conversations` | List conversations |
-| POST | `/api/chat/conversations/{id}/messages` | Send message |
+| DELETE | `/api/chat/conversations/{id}` | Delete conversation |
+| POST | `/api/chat/conversations/{id}/messages` | Send message (SSE-streaming response) |
 | GET | `/api/chat/conversations/{id}/messages` | Get messages |
+
+### Documents
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/documents/upload` | Upload document (multipart) |
+| GET | `/api/documents` | List user's documents |
+| DELETE | `/api/documents/{id}` | Delete document |
+| GET | `/api/documents/{id}/download` | Download / preview document file |
 
 ### Transactions
 | Method | Path | Description |

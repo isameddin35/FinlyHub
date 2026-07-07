@@ -10,7 +10,20 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Bot, Send, Plus, MessageSquare, Trash2, FileText, Sparkles, StopCircle } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import toast from 'react-hot-toast'
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 
 const SUGGESTED_PROMPTS = [
   'What is the VAT rate?',
@@ -166,7 +179,9 @@ export function CopilotPage() {
                 : 'bg-muted text-foreground rounded-tl-sm'
             }`}
           >
-            {msg.content}
+            <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+            </div>
           </div>
 
           <div className="text-[10px] text-muted-foreground mt-1 px-1">
@@ -251,12 +266,27 @@ export function CopilotPage() {
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={(e) => handleDeleteConversation(e, conv.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded">
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete this conversation and all its messages.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={(e: React.MouseEvent) => handleDeleteConversation(e, conv.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </button>
               ))
@@ -332,7 +362,11 @@ export function CopilotPage() {
                     </div>
                     <div className="max-w-[75%]">
                       <div className="rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-muted text-foreground rounded-tl-sm">
-                        {streamingContent || (
+                        {streamingContent ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none break-words">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingContent}</ReactMarkdown>
+                          </div>
+                        ) : (
                           <div className="flex gap-1 items-center h-5">
                             <span className="h-2 w-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                             <span className="h-2 w-2 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />

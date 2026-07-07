@@ -23,12 +23,16 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 | OCR | Tess4J (Tesseract) | 5.12.0 |
 | Office | Apache POI | 5.3.0 |
 | AI (Mock) | MockAiService (built-in) | — |
-| AI (OpenAI) | com.theokanning.openai-gpt3-java | 0.18.2 |
+| AI (Groq Chat) | Groq via com.theokanning.openai-gpt3-java | 0.18.2 |
+| AI (Ollama Embeddings) | Ollama via com.theokanning.openai-gpt3-java | 0.18.2 |
+| Embedding dims | nomic-embed-text → 768-dim vectors | — |
 | Frontend | React + TypeScript | 19 / 5.7 |
 | Bundler | Vite | 6 |
 | Styling | Tailwind CSS + shadcn/ui + Radix UI | 3.4 |
 | Server State | TanStack Query | 5.62 |
 | Charts | Recharts | 2.15 |
+| Markdown | react-markdown + remark-gfm | 10 / 4 |
+| Dialogs | @radix-ui/react-alert-dialog | 1.1 |
 | Deployment | Docker Compose | — |
 
 ---
@@ -64,12 +68,12 @@ finlyhub/
 │   ├── Dockerfile               # Multi-stage (node:22 → nginx:alpine)
 │   ├── nginx.conf               # SPA fallback, /api proxy to backend:8080
 │   └── src/
-│       ├── api/                 # 8 typed modules (auth, invoices, chatbot, etc.)
+│       ├── api/                 # 9 typed modules (auth, invoices, chatbot, documents, etc.)
 │       ├── types/               # TypeScript interfaces matching backend DTOs
 │       ├── hooks/               # useAuth, useTheme (React Context)
 │       ├── components/
 │       │   ├── layout/          # AppLayout, Sidebar, Header
-│       │   └── ui/              # 15 shadcn/ui primitives
+│   │   └── ui/              # 16 shadcn/ui primitives
 │       └── features/            # 9 page components (one per feature)
 ```
 
@@ -102,6 +106,8 @@ finlyhub/
 - **Forms**: `react-hook-form` + `zod` validation schemas.
 - **File uploads**: `react-dropzone` + `FormData` + `multipart/form-data`.
 - **Styling**: Tailwind utility classes + `cn()` from `lib/utils.ts` for class merging. Use shadcn/ui primitives from `components/ui/`.
+- **Markdown**: `react-markdown` v10 + `remark-gfm` v4 for rendering bot responses in the chat copilot.
+- **Dialogs**: `@radix-ui/react-alert-dialog` for confirmation dialogs on destructive actions (delete conversation, delete document).
 
 ### Database (Liquibase YAML)
 - **All schema changes in YAML.** Never use Hibernate `ddl-auto`.

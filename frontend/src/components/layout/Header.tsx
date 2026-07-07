@@ -11,12 +11,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Moon, Sun, Bell, LogOut, User } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+
+const pageTitles: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/invoices': 'Invoices',
+  '/copilot': 'Copilot',
+  '/transactions': 'Transactions',
+  '/reports': 'Reports',
+  '/reconciliation': 'Reconciliation',
+  '/documents': 'Documents',
+  '/settings': 'Settings',
+}
 
 export function Header() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const initials = user
     ? `${user.firstName[0]}${user.lastName[0]}`
@@ -25,7 +37,7 @@ export function Header() {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-card px-6">
       <div className="flex items-center gap-2">
-        <h1 className="text-lg font-semibold">Finly Hub</h1>
+        <h1 className="text-lg font-semibold">{pageTitles[location.pathname] ?? 'Finly Hub'}</h1>
       </div>
 
       <div className="flex items-center gap-2">

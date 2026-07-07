@@ -8,7 +8,7 @@
 │ (React)  │       │ (5173)   │       │ Backend :8080 │       │ + pgvector       │
 └──────────┘       └──────────┘       └──────────────┘       └──────────────────┘
      ▲                   │                                        │
-     │                   │ /api/health                            │ vector(1536)
+     │                   │ /api/health                            │ vector(768)
      │                   └──┬── /api/* ──── backend:8080          │ IVFFLAT index
      │                      │                                     │
      │                ┌─────┴──────┐                              │
@@ -52,7 +52,7 @@
            ▼        ▼                 ▼             ▼
     ┌───────────────────────────────────────────────────────┐
     │                   chatbot                              │
-    │  conversation CRUD + pgvector <-> search → AiService  │
+    │  conversation CRUD + pgvector <=> search → AiService  │
     └───────────────────────────────────────────────────────┘
 
     ┌──────────────┐   ┌──────────────────┐
@@ -85,7 +85,7 @@
 
 ```
 roles ──< user_roles >── users ──┬── documents ──< document_chunks
-                                  │                    (vector(1536))
+                                  │                    (vector(768))
                                   │
                                   ├── invoice_documents ──< invoices
                                   │     (V010 split from   │
@@ -116,7 +116,7 @@ roles ──< user_roles >── users ──┬── documents ──< documen
 | 2 | `users` | User accounts | email (UNIQUE), password_hash |
 | 3 | `user_roles` | Many-to-many join | user_id, role_id |
 | 4 | `documents` | General-purpose document store | user_id, document_type, status, raw_text |
-| 5 | `document_chunks` | RAG text chunks with embeddings | document_id, chunk_index, embedding (vector(1536)) |
+| 5 | `document_chunks` | RAG text chunks with embeddings | document_id, chunk_index, embedding (vector(768)) |
 | 6 | `invoice_documents` | Invoice-specific file metadata | user_id, filename, file_path |
 | 7 | `invoices` | Extracted invoice data | user_id, document_id, vendor, amounts, status |
 | 8 | `invoice_extractions` | OCR + AI extraction history | invoice_id, stage, extracted_data (JSONB) |
@@ -171,7 +171,7 @@ Parse text (PDFBox/POI)
 Chunk (512 tokens, 64-token overlap)
     │
     ▼
-For each chunk: AiService.generateEmbedding → [0.15, -0.02, ...] (1536 dims)
+For each chunk: AiService.generateEmbedding → [0.15, -0.02, ...] (768 dims)
     │
     ▼
 Store chunk + embedding in document_chunks
@@ -225,34 +225,39 @@ User approves → Reconciliation COMPLETED → APPROVED
 ## AI Layer
 
 ```
-         ┌─────────────────────────────┐
-         │       AiService (interface) │
-         │                             │
-         │  +extractInvoiceData(text)  │
-         │  +chat(ChatRequest)         │
-         │  +generateEmbedding(text)   │
-         │  +categorizeTransaction(tx) │
-         └──────────┬──────────────────┘
-                    │
-          implements│
-           ┌───────┴────────┐
-           │                │
-           ▼                ▼
-   ┌──────────────┐  ┌──────────────┐
-   │ MockAiService │  │OpenAiAiService│
-   │ (default)     │  │ (ai.provider  │
-   │ deterministic │  │  = openai)   │
-   │ random data   │  │ real GPT-4o  │
-   │ no API key    │  │ needs key    │
-   └──────────────┘  └──────────────┘
-         │                    │
-   ┌─────┴─────┐        ┌────┴────┐
-   │For demo / │        │Production│
-   │dev/test   │        │deployment│
-   └───────────┘        └─────────┘
+          ┌───────────────────────────────────────┐
+          │         AiService (interface)          │
+          │                                       │
+          │  +extractInvoiceData(text)            │
+          │  +chat(ChatRequest)                   │
+          │  +generateEmbedding(text)             │
+          │  +categorizeTransaction(tx)           │
+          └──────────┬────────────────────────────┘
+                     │
+           implements│
+            ┌───────┴────────┐
+            │                │
+            ▼                ▼
+    ┌──────────────┐  ┌──────────────────────┐
+    │ MockAiService │  │   OpenAiAiService    │
+    │ (default)     │  │  (ai.provider=openai)│
+    │ deterministic │  │                      │
+    │ random data   │  │  Dual OpenAiService  │
+    │ no API key    │  │  ┌────────┐ ┌──────┐│
+    └──────────────┘  │  │ Chat   │ │Embeds││
+                      │  │(Groq)  │ │Ollama││
+                      │  │llama-  │ │nomic-││
+                      │  │3.1-8b  │ │embed ││
+                      │  │instant │ │768dim││
+                      │  └────────┘ └──────┘│
+                      └──────────────────────┘
 ```
 
-**Selection logic** (`OpenAiConfig.java`): `@ConditionalOnProperty(name = "ai.provider", havingValue = "openai")` creates `OpenAiAiService`; default (or `mock`) creates `MockAiService`.
+**Selection logic** (`OpenAiConfig.java`): `@ConditionalOnProperty(name = "ai.provider", havingValue = "openai")` creates `OpenAiAiService` with dual `OpenAiService` instances — one for chat (Groq) and one for embeddings (Ollama). Default (or `mock`) creates `MockAiService`.
+
+**Groq path fix**: `OpenAiApi` uses `@POST("/v1/chat/completions")` — leading slash causes absolute path resolution in OkHttp, dropping `/openai/` from the base URL. An interceptor rewrites `/v1/{path}` → `/openai/v1/{path}` for the Groq client only.
+
+**Embedding fallback**: On failure, `generateEmbedding()` returns `List.of()` (empty) instead of random noise — chat works without document context.
 
 ---
 
@@ -355,9 +360,15 @@ Frontend:                     Backend:
 | Decision | Rationale |
 |----------|-----------|
 | **pgvector over separate vector DB** | Reduces infra complexity; PostgreSQL with one extension vs running Qdrant/Pinecone |
+| **Groq for chat + Ollama for embeddings** | Groq's llama-3.1-8b-instant responds in <1s for free; Ollama's nomic-embed-text is 274MB and fast on CPU |
+| **Dual OpenAiService instances** | Separate clients for chat (Groq, 300s timeout) and embeddings (Ollama, 30s timeout) with independent base URLs and API keys |
+| **OkHttp interceptor for Groq path fix** | Minimal code change — one interceptor rewrites `/v1/` → `/openai/v1/` to fix OkHttp absolute-path resolution |
+| **`cast(? as vector)` over `?::vector`** | `?::vector` causes PostgreSQL to infer parameter as vector type; JDBC can't serialize String as vector. `cast(? as vector)` keeps parameter as unknown/text |
+| **Embedding failure returns empty list** | `List.of()` avoids semantically meaningless noise; chat still works without document context |
+| **User isolation in RAG** | Filter `document_chunks` by `d.user_id` via JOIN to `documents` — prevents cross-user document leaks |
 | **Tess4J (offline OCR)** | Free, works without internet; can swap to cloud OCR later |
 | **PDFBox 3.x** | Apache license, mature, handles both extraction and generation |
-| **Synchronous chat (no SSE)** | Simpler to build and demo; SSE planned for production |
+| **SSE streaming for chat** | Real-time token-by-token response; better UX than synchronous polling |
 | **Manual mappers over MapStruct** | Avoids annotation processor complexity; explicit field mapping is clearer |
 | **Liquibase YAML over Hibernate DDL** | Explicit, version-controlled, auditable migrations |
 | **Demo profile for seed data** | Clean separation: schema always, seed only for demo/investor preview |

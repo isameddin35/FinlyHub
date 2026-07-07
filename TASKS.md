@@ -73,18 +73,40 @@
 - [x] **Fix reconciliation status String vs enum comparison** — `"APPROVED".equals(r.getStatus())` always false with enum
 - [x] **Fix auto-categorization never triggered after import** — Injected `TransactionCategorizationService` into `TransactionImportService`, calls `categorizeBatch()` after `saveAll()`
 - [x] **Fix combobox transparency** — Added missing `--popover` CSS variables and Tailwind color mapping
+- [x] **Switch from Ollama chat to Groq** — Dual `OpenAiService`: Groq for chat (llama-3.1-8b-instant), Ollama for embeddings (nomic-embed-text only)
+- [x] **Fix Groq URL mismatch** — OkHttp interceptor rewrites `/v1/` → `/openai/v1/` to fix absolute-path resolution
+- [x] **Fix embedding connection inside Docker** — Changed `OPENAI_EMBEDDING_BASE_URL` from `localhost:11434` to `http://ollama:11434`
+- [x] **Fix currency format error** — Updated extraction prompt for ISO 4217 codes; `formatCurrency` in utils maps symbols and wraps in try/catch
+- [x] **Chat duplication fix** (backend) — Moved `messageRepository.save(userMessage)` after `ChatRequest.build()`
+- [x] **Chat duplication fix** (frontend) — Replaced `optimisticMessages` with `pendingUserMessage` string state
+- [x] **Message alignment fix** — All `msg.role` comparisons use `.toLowerCase()`
+- [x] **Embedding fallback** — `generateEmbedding()` returns `List.of()` on failure
+- [x] **Vector operator** — Changed `<->` (L2) to `<=>` (cosine) with similarity score in `SourceDocument.relevanceScore`
+- [x] **Ollama slimmed** — Removed `ollama pull qwen2:1.5b` from entrypoint; healthcheck checks `nomic-embed-text`
+- [x] **User isolation for RAG** — `searchRelevantDocuments()` JOINs `document_chunks` with `documents` on `document_id`
+- [x] **Fixed document upload INSERT** — Replaced `chunkRepository.saveAll()` with native SQL `INSERT ... cast(? as vector)`
+- [x] **Added approved invoices Excel export** — `GET /api/invoices/export` returns XLSX workbook via `XSSFWorkbook`
+- [x] **Fixed CI/CD — added --build flag** — `deploy.sh` changed to `docker compose up -d --build`
+- [x] **Made invoice fields editable before approval** — Replaced `ConfidenceField` with editable form inputs in dialog
+
+## Phase 4: UI Improvements
+
+- [x] **Markdown rendering in chat** — Added `react-markdown` + `remark-gfm` for formatted bot responses
+- [x] **Document inline preview + download** — New `GET /api/documents/{id}/download` endpoint; preview dialog with iframe; download button per row
+- [x] **Logout in sidebar** — `LogOut` icon + "Log out" text below collapse toggle
+- [x] **Confirmation dialogs for destructive actions** — Added `AlertDialog` component; applied to conversation + document delete
+- [x] **Password visibility toggle** — Eye/EyeOff button in password fields on Login and Register pages
+- [x] **Dynamic page title in header** — Header title updates based on current route
 
 ## Known Issues
 
-- [-] **`searchSimilarChunks()` is a stub** — Returns `List.of()`, never called
-- [-] **`/uploads/**` exposed without auth** — `WebConfig` serves files as static resources
+- (none currently tracked)
 
 ## Future Enhancements
 
 - [ ] **Production deployment guide** — SSL, domain, CORS for non-localhost
 - [ ] **Test suite** — Backend (JUnit 5 + Testcontainers), Frontend (Vitest + Playwright)
 - [ ] **Multi-tenancy** — Company-scoped data isolation
-- [ ] **File download endpoint** — Authenticated `GET /api/documents/{id}/download`
 - [ ] **SSO / OAuth2** — Google/Microsoft login
 - [ ] **Email notifications** — SendGrid / SMTP integration
 - [ ] **WebSocket notifications** — Real-time UI updates for processing status
