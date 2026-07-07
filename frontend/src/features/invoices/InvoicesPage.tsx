@@ -31,20 +31,6 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant={variantMap[status] ?? 'default'}>{labelMap[status] ?? status}</Badge>
 }
 
-function ConfidenceField({ label, value, confidence }: { label: string; value: string | number | null; confidence: number | null }) {
-  const score = confidence ?? 0
-  const color = score >= 80 ? 'text-emerald-600 dark:text-emerald-400' : score >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <Label className="text-xs text-muted-foreground">{label}</Label>
-        <span className={`text-xs font-medium ${color}`}>{formatPercentage(score)}</span>
-      </div>
-      <Input value={value ?? ''} readOnly className="bg-muted/50" />
-    </div>
-  )
-}
-
 function InvoiceSkeleton() {
   return (
     <Card className="overflow-hidden">
@@ -101,6 +87,7 @@ export function InvoicesPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceResponse | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editFields, setEditFields] = useState<Record<string, string>>({})
 
   const { data: invoices, isLoading, isError } = useQuery({
     queryKey: ['invoices'],
@@ -163,19 +150,20 @@ export function InvoicesPage() {
   })
 
   const approveMutation = useMutation({
-    mutationFn: async (invoice: InvoiceResponse) => {
-      const response = await invoiceApi.approve(invoice.id, {
-        invoiceNumber: invoice.invoiceNumber ?? undefined,
-        vendorName: invoice.vendorName ?? undefined,
-        vendorEmail: invoice.vendorEmail ?? undefined,
-        invoiceDate: invoice.invoiceDate ?? undefined,
-        dueDate: invoice.dueDate ?? undefined,
-        currency: invoice.currency,
-        subtotal: invoice.subtotal ?? undefined,
-        taxAmount: invoice.taxAmount ?? undefined,
-        vatAmount: invoice.vatAmount ?? undefined,
-        discountAmount: invoice.discountAmount ?? undefined,
-        totalAmount: invoice.totalAmount,
+    mutationFn: async () => {
+      if (!selectedInvoice) throw new Error('No invoice selected')
+      const response = await invoiceApi.approve(selectedInvoice.id, {
+        invoiceNumber: editFields.invoiceNumber || undefined,
+        vendorName: editFields.vendorName || undefined,
+        vendorEmail: editFields.vendorEmail || undefined,
+        invoiceDate: editFields.invoiceDate || undefined,
+        dueDate: editFields.dueDate || undefined,
+        currency: editFields.currency || undefined,
+        subtotal: editFields.subtotal ? parseFloat(editFields.subtotal) : undefined,
+        taxAmount: editFields.taxAmount ? parseFloat(editFields.taxAmount) : undefined,
+        vatAmount: editFields.vatAmount ? parseFloat(editFields.vatAmount) : undefined,
+        discountAmount: editFields.discountAmount ? parseFloat(editFields.discountAmount) : undefined,
+        totalAmount: editFields.totalAmount ? parseFloat(editFields.totalAmount) : undefined,
       })
       return response.data.data
     },
@@ -190,8 +178,25 @@ export function InvoicesPage() {
     },
   })
 
+  const handleFieldChange = (field: string, value: string) => {
+    setEditFields(prev => ({ ...prev, [field]: value }))
+  }
+
   const openDialog = (invoice: InvoiceResponse) => {
     setSelectedInvoice(invoice)
+    setEditFields({
+      invoiceNumber: invoice.invoiceNumber ?? '',
+      vendorName: invoice.vendorName ?? '',
+      vendorEmail: invoice.vendorEmail ?? '',
+      invoiceDate: invoice.invoiceDate ?? '',
+      dueDate: invoice.dueDate ?? '',
+      currency: invoice.currency,
+      subtotal: invoice.subtotal?.toString() ?? '',
+      taxAmount: invoice.taxAmount?.toString() ?? '',
+      vatAmount: invoice.vatAmount?.toString() ?? '',
+      discountAmount: invoice.discountAmount?.toString() ?? '',
+      totalAmount: invoice.totalAmount.toString(),
+    })
     setDialogOpen(true)
   }
 
@@ -337,16 +342,50 @@ export function InvoicesPage() {
               )}
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <ConfidenceField label="Vendor Name" value={invoice.vendorName} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Vendor Email" value={invoice.vendorEmail} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Invoice Date" value={invoice.invoiceDate ? formatDate(invoice.invoiceDate) : null} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Due Date" value={invoice.dueDate ? formatDate(invoice.dueDate) : null} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Currency" value={invoice.currency} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Subtotal" value={invoice.subtotal != null ? formatCurrency(invoice.subtotal, invoice.currency) : null} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Tax Amount" value={invoice.taxAmount != null ? formatCurrency(invoice.taxAmount, invoice.currency) : null} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="VAT Amount" value={invoice.vatAmount != null ? formatCurrency(invoice.vatAmount, invoice.currency) : null} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Discount" value={invoice.discountAmount != null ? formatCurrency(invoice.discountAmount, invoice.currency) : null} confidence={invoice.confidenceScore} />
-                <ConfidenceField label="Total Amount" value={formatCurrency(invoice.totalAmount, invoice.currency)} confidence={invoice.confidenceScore} />
+                <div className="space-y-2">
+                  <Label htmlFor="vendorName">Vendor Name</Label>
+                  <Input id="vendorName" value={editFields.vendorName} onChange={(e) => handleFieldChange('vendorName', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vendorEmail">Vendor Email</Label>
+                  <Input id="vendorEmail" type="email" value={editFields.vendorEmail} onChange={(e) => handleFieldChange('vendorEmail', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceNumber">Invoice Number</Label>
+                  <Input id="invoiceNumber" value={editFields.invoiceNumber} onChange={(e) => handleFieldChange('invoiceNumber', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Input id="currency" value={editFields.currency} onChange={(e) => handleFieldChange('currency', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceDate">Invoice Date</Label>
+                  <Input id="invoiceDate" type="date" value={editFields.invoiceDate} onChange={(e) => handleFieldChange('invoiceDate', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Input id="dueDate" type="date" value={editFields.dueDate} onChange={(e) => handleFieldChange('dueDate', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="subtotal">Subtotal</Label>
+                  <Input id="subtotal" type="number" step="0.01" value={editFields.subtotal} onChange={(e) => handleFieldChange('subtotal', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="taxAmount">Tax Amount</Label>
+                  <Input id="taxAmount" type="number" step="0.01" value={editFields.taxAmount} onChange={(e) => handleFieldChange('taxAmount', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vatAmount">VAT Amount</Label>
+                  <Input id="vatAmount" type="number" step="0.01" value={editFields.vatAmount} onChange={(e) => handleFieldChange('vatAmount', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="discountAmount">Discount</Label>
+                  <Input id="discountAmount" type="number" step="0.01" value={editFields.discountAmount} onChange={(e) => handleFieldChange('discountAmount', e.target.value)} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="totalAmount">Total Amount</Label>
+                  <Input id="totalAmount" type="number" step="0.01" value={editFields.totalAmount} onChange={(e) => handleFieldChange('totalAmount', e.target.value)} />
+                </div>
               </div>
             </div>
 
@@ -356,7 +395,7 @@ export function InvoicesPage() {
               </Button>
               {invoice.status !== 'APPROVED' && (
                 <Button
-                  onClick={() => approveMutation.mutate(invoice)}
+                  onClick={() => approveMutation.mutate()}
                   disabled={approveMutation.isPending}
                 >
                   {approveMutation.isPending ? (
