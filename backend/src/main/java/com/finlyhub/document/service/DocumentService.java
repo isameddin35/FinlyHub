@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +38,9 @@ public class DocumentService {
     private final DocumentMapper documentMapper;
     private final DocumentParserService parserService;
     private final AiService aiService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Value("${app.upload.dir:uploads}/documents")
     private String uploadDir;
@@ -92,7 +97,17 @@ public class DocumentService {
                     chunkEntities.add(chunk);
                 }
 
-                chunkRepository.saveAll(chunkEntities);
+                String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at) VALUES (?, ?, ?, ?, ?, ?::vector, NOW())";
+                for (DocumentChunk chunk : chunkEntities) {
+                    entityManager.createNativeQuery(insertSql)
+                            .setParameter(1, chunk.getDocumentId())
+                            .setParameter(2, chunk.getChunkIndex())
+                            .setParameter(3, chunk.getContent())
+                            .setParameter(4, chunk.getTokenCount())
+                            .setParameter(5, chunk.getFilename())
+                            .setParameter(6, chunk.getEmbedding())
+                            .executeUpdate();
+                }
 
                 document.setStatus(Document.DocumentStatus.INDEXED);
                 documentRepository.save(document);
