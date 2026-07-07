@@ -19,4 +19,7 @@ export const invoiceApi = {
 
   approve: (id: number, data: InvoiceApprovalRequest) =>
     apiClient.put<ApiResponse<InvoiceResponse>>(`/invoices/${id}/approve`, data),
+
+  exportApproved: () =>
+    apiClient.get('/invoices/export', { responseType: 'blob' }),
 }

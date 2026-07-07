@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, FileText, CheckCircle, AlertCircle, Download } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { formatCurrency, formatDate, formatPercentage } from '@/lib/utils'
 import toast from 'react-hot-toast'
@@ -195,6 +195,25 @@ export function InvoicesPage() {
     setDialogOpen(true)
   }
 
+  const approvedCount = invoices?.filter(inv => inv.status === 'APPROVED').length ?? 0
+
+  const handleExport = async () => {
+    try {
+      const response = await invoiceApi.exportApproved()
+      const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `approved_invoices_${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Failed to export invoices')
+    }
+  }
+
   const invoice = selectedInvoice
 
   return (
@@ -206,6 +225,15 @@ export function InvoicesPage() {
             Upload and manage your invoices
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExport}
+          disabled={approvedCount === 0}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Export to Excel
+        </Button>
       </div>
 
       <div
