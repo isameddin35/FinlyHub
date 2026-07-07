@@ -64,7 +64,7 @@ public class ChatbotService {
         userMessage.setRole(Message.Role.USER);
         userMessage.setContent(message);
 
-        List<SourceDocument> relevantDocs = searchRelevantDocuments(message);
+        List<SourceDocument> relevantDocs = searchRelevantDocuments(userId, message);
 
         List<Message> history = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
         List<String> historyStrings = history.stream()
@@ -119,7 +119,7 @@ public class ChatbotService {
         userMessage.setRole(Message.Role.USER);
         userMessage.setContent(message);
 
-        List<SourceDocument> relevantDocs = searchRelevantDocuments(message);
+        List<SourceDocument> relevantDocs = searchRelevantDocuments(userId, message);
 
         List<Message> history = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
         List<String> historyStrings = history.stream()
@@ -192,7 +192,7 @@ public class ChatbotService {
         return emitter;
     }
 
-    private List<SourceDocument> searchRelevantDocuments(String query) {
+    private List<SourceDocument> searchRelevantDocuments(Long userId, String query) {
         try {
             List<Float> embedding = aiService.generateEmbedding(query);
             if (embedding == null || embedding.isEmpty()) {
@@ -203,10 +203,16 @@ public class ChatbotService {
                     .map(String::valueOf)
                     .collect(Collectors.joining(",", "[", "]"));
 
-            String sql = "SELECT id, document_id, chunk_index, content, filename, 1 - (embedding <=> cast(:embedding as vector)) AS similarity FROM document_chunks ORDER BY embedding <=> cast(:embedding as vector) LIMIT 5";
+            String sql = "SELECT c.id, c.document_id, c.chunk_index, c.content, c.filename, "
+                       + "1 - (c.embedding <=> cast(:embedding as vector)) AS similarity "
+                       + "FROM document_chunks c "
+                       + "JOIN documents d ON c.document_id = d.id "
+                       + "WHERE d.user_id = :userId "
+                       + "ORDER BY c.embedding <=> cast(:embedding as vector) LIMIT 5";
 
             List<Object[]> results = entityManager.createNativeQuery(sql)
                     .setParameter("embedding", embeddingStr)
+                    .setParameter("userId", userId)
                     .getResultList();
 
             List<SourceDocument> docs = new ArrayList<>();
