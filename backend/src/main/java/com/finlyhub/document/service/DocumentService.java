@@ -97,7 +97,7 @@ public class DocumentService {
                     chunkEntities.add(chunk);
                 }
 
-                String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at) VALUES (?, ?, ?, ?, ?, ?::vector, NOW())";
+                String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at) VALUES (?, ?, ?, ?, ?, cast(? as vector), NOW())";
                 for (DocumentChunk chunk : chunkEntities) {
                     entityManager.createNativeQuery(insertSql)
                             .setParameter(1, chunk.getDocumentId())
