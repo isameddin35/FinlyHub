@@ -309,7 +309,7 @@ export function TransactionsPage() {
                               />
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {formatPercentage(transaction.confidenceScore / 100)}
+                              {formatPercentage(transaction.confidenceScore)}
                             </span>
                           </div>
                         ) : transaction.userApproved ? (
