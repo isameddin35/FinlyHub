@@ -1,9 +1,27 @@
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Briefcase, Store } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import toast from 'react-hot-toast'
+
+const DEMO_ACCOUNTS = Array.from({ length: 10 }, (_, i) =>
+  `demo${String(i + 1).padStart(2, '0')}@finlyhub.com`
+)
 
 export function RoleSelectPage() {
   const navigate = useNavigate()
+  const { login } = useAuth()
+
+  const loginAsDemo = async () => {
+    const email = DEMO_ACCOUNTS[Math.floor(Math.random() * DEMO_ACCOUNTS.length)]
+    try {
+      await login({ email, password: 'password' })
+      toast.success('Welcome to Finly Hub!')
+      navigate('/dashboard')
+    } catch {
+      toast.error('Demo login failed')
+    }
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -19,7 +37,7 @@ export function RoleSelectPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Card
             className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
-            onClick={() => navigate('/register?role=owner')}
+            onClick={loginAsDemo}
           >
             <CardHeader className="items-center text-center pb-2 pt-6">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -37,7 +55,7 @@ export function RoleSelectPage() {
 
           <Card
             className="cursor-pointer transition-all hover:border-primary hover:shadow-md"
-            onClick={() => navigate('/register?role=accountant')}
+            onClick={loginAsDemo}
           >
             <CardHeader className="items-center text-center pb-2 pt-6">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
