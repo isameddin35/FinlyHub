@@ -65,15 +65,16 @@ npm run dev
 
 ### Demo Mode
 
-The default configuration uses `AI_PROVIDER=mock` — no API key required. The application seeds demo data (users, invoices, transactions) on first launch.
+The default configuration uses `AI_PROVIDER=openai` (Groq for chat, Ollama for embeddings). On first launch, Liquibase seeds demo data (users, invoices, transactions) and a `CommandLineRunner` provisions 10 sandbox accounts with cloned data.
 
 **Demo accounts** (password: `password`):
 
 | Email | Role |
 |-------|------|
-| admin@finlyhub.com | Owner |
-| accountant@finlyhub.com | Accountant |
-| viewer@finlyhub.com | Viewer |
+| admin@finlyhub.com | ADMIN, ACCOUNTANT |
+| accountant@finlyhub.com | ACCOUNTANT |
+| viewer@finlyhub.com | VIEWER |
+| demo01@finlyhub.com … demo10@finlyhub.com | ADMIN |
 
 ### Production Mode (with Groq + Ollama)
 
@@ -83,7 +84,7 @@ export OPENAI_API_KEY=gsk-your-groq-api-key
 export OPENAI_BASE_URL=https://api.groq.com/openai/v1
 export OPENAI_MODEL=llama-3.1-8b-instant
 export OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
-export OPENAI_EMBEDDING_API_KEY=sk-ollama
+export OPENAI_EMBEDDING_API_KEY=ollama
 export AI_PROVIDER=openai
 
 # Ensure Ollama is running with nomic-embed-text
@@ -122,7 +123,7 @@ finlyhub/
 │   │   ├── reconciliation/    # Bank reconciliation
 │   │   ├── audit/             # Audit logging
 │   │   ├── dashboard/         # Metrics & activity
-│   │   ├── common/            # Shared services & models
+│   │   ├── common/            # Shared services, models & bootstrap
 │   │   └── config/            # Security, CORS, AI config
 │   ├── src/main/resources/db/changelog/  # Liquibase migrations
 │   └── pom.xml
@@ -212,6 +213,10 @@ finlyhub/
 ```bash
 docker compose up --build -d
 ```
+
+### CI/CD Pipeline
+
+Pushing to `main` triggers a **GitHub Actions** workflow that SSM-connects to the EC2 instance and runs `deploy/deploy.sh` (git pull + docker compose up --build). Secrets (JWT, DB password, Groq API key) are fetched from AWS SSM Parameter Store.
 
 ### Production Considerations
 
