@@ -7,7 +7,7 @@ export function AppLayout() {
   const { isAuthenticated } = useAuth()
 
   if (!isAuthenticated) {
-    return <Navigate to="/role-select" replace />
+    return <Navigate to="/login" replace />
   }
 
   return (

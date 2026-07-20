@@ -37,18 +37,6 @@ describe('RegisterPage', () => {
     expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument()
   })
 
-  it('shows "Small Business Owner" role label by default', () => {
-    mockUseAuth.mockReturnValue({
-      register: mockRegister,
-      isAuthenticated: false,
-      isLoading: false,
-    })
-
-    renderRegister()
-
-    expect(screen.getByText('Small Business Owner')).toBeInTheDocument()
-  })
-
   it('calls register with form data on submit', async () => {
     const user = userEvent.setup()
     mockRegister.mockResolvedValue(undefined)
@@ -72,7 +60,6 @@ describe('RegisterPage', () => {
       email: 'john@test.com',
       password: 'password123',
       company: '',
-      role: 'VIEWER',
     })
   })
 

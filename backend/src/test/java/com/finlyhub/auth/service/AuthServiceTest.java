@@ -99,35 +99,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_WithAccountantRole_AssignsAccountantRole() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("accountant@example.com");
-        request.setPassword("password123");
-        request.setFirstName("Jane");
-        request.setLastName("Smith");
-        request.setRole("ACCOUNTANT");
-
-        Role accountantRole = new Role("ACCOUNTANT");
-        accountantRole.setId(2L);
-
-        User savedUser = createUser(2L, "accountant@example.com", "encoded", "Jane", "Smith", null, Set.of(accountantRole));
-
-        when(userRepository.existsByEmail("accountant@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encoded");
-        when(roleRepository.findByName("ACCOUNTANT")).thenReturn(Optional.of(accountantRole));
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
-        when(jwtTokenProvider.generateAccessToken(anyLong(), anyString(), anyList())).thenReturn("token");
-        when(jwtTokenProvider.generateRefreshToken(anyLong())).thenReturn("rtoken");
-        when(userMapper.toProfileResponse(any())).thenReturn(createProfile(savedUser));
-
-        AuthResponse response = authService.register(request);
-
-        assertThat(response).isNotNull();
-        verify(roleRepository).findByName("ACCOUNTANT");
-    }
-
-    @Test
-    void register_WithoutRole_DefaultsToViewer() {
+    void register_AssignsViewerRole() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("viewer@example.com");
         request.setPassword("password123");

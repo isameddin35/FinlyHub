@@ -26,6 +26,4 @@ public class RegisterRequest {
 
     @Size(max = 255)
     private String company;
-
-    private String role;
 }

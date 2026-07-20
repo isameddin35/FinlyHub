@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -48,11 +47,8 @@ public class AuthService {
         user.setLastName(request.getLastName());
         user.setCompany(request.getCompany());
 
-        String roleName = Optional.ofNullable(request.getRole())
-                .filter(r -> r.equals("ACCOUNTANT"))
-                .orElse("VIEWER");
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new BusinessException("Role not found: " + roleName));
+        Role role = roleRepository.findByName("VIEWER")
+                .orElseThrow(() -> new BusinessException("VIEWER role not found"));
         user.setRoles(Set.of(role));
 
         user = userRepository.save(user);

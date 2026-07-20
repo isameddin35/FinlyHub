@@ -36,7 +36,6 @@ describe('authApi', () => {
       lastName: 'Doe',
       email: 'john@test.com',
       password: 'password123',
-      role: 'VIEWER',
     })
 
     expect(mockPost).toHaveBeenCalledWith('/auth/register', {
@@ -44,7 +43,6 @@ describe('authApi', () => {
       lastName: 'Doe',
       email: 'john@test.com',
       password: 'password123',
-      role: 'VIEWER',
     })
   })
 

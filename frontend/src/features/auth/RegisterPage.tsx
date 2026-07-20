@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,8 +10,6 @@ import toast from 'react-hot-toast'
 
 export function RegisterPage() {
   const { register, isAuthenticated, isLoading } = useAuth()
-  const [searchParams] = useSearchParams()
-  const role = searchParams.get('role') === 'accountant' ? 'ACCOUNTANT' : 'VIEWER'
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -26,14 +24,12 @@ export function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await register({ firstName, lastName, email, password, company, role })
+      await register({ firstName, lastName, email, password, company })
       toast.success('Account created!')
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed')
     }
   }
-
-  const roleLabel = role === 'ACCOUNTANT' ? 'Freelance Accountant' : 'Small Business Owner'
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -43,9 +39,7 @@ export function RegisterPage() {
             <span className="text-xl font-bold text-primary-foreground">FH</span>
           </div>
           <CardTitle className="text-2xl">Create account</CardTitle>
-          <CardDescription>
-            Get started with Finly Hub as a <span className="font-medium">{roleLabel}</span>
-          </CardDescription>
+          <CardDescription>Get started with Finly Hub</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,7 +76,7 @@ export function RegisterPage() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link to={role === 'ACCOUNTANT' ? '/login?role=accountant' : '/login'} className="text-primary hover:underline">Sign in</Link>
+            <Link to="/login" className="text-primary hover:underline">Sign in</Link>
           </p>
         </CardContent>
       </Card>

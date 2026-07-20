@@ -20,7 +20,7 @@ function renderLogin() {
 }
 
 describe('LoginPage', () => {
-  it('renders the login form with default fields', () => {
+  it('renders the login form with empty fields', () => {
     mockUseAuth.mockReturnValue({
       login: mockLogin,
       isAuthenticated: false,
@@ -46,9 +46,11 @@ describe('LoginPage', () => {
 
     renderLogin()
 
+    await user.type(screen.getByLabelText('Email'), 'user@test.com')
+    await user.type(screen.getByLabelText('Password'), 'mypassword')
     await user.click(screen.getByRole('button', { name: 'Sign in' }))
 
-    expect(mockLogin).toHaveBeenCalledWith({ email: 'admin@finlyhub.com', password: 'password' })
+    expect(mockLogin).toHaveBeenCalledWith({ email: 'user@test.com', password: 'mypassword' })
   })
 
   it('shows "Signing in..." when loading', () => {
@@ -73,18 +75,5 @@ describe('LoginPage', () => {
     renderLogin()
 
     expect(screen.queryByText('Welcome back')).not.toBeInTheDocument()
-  })
-
-  it('shows demo credentials for owner role', () => {
-    mockUseAuth.mockReturnValue({
-      login: mockLogin,
-      isAuthenticated: false,
-      isLoading: false,
-    })
-
-    renderLogin()
-
-    expect(screen.getByText(/admin@finlyhub.com/)).toBeInTheDocument()
-    expect(screen.getByText(/viewer@finlyhub.com/)).toBeInTheDocument()
   })
 })

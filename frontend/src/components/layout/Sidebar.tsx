@@ -16,24 +16,22 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useState } from 'react'
-import { useRoleLabels } from '@/hooks/useRoleLabels'
 import { useAuth } from '@/hooks/useAuth'
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
-  const labels = useRoleLabels()
   const { logout } = useAuth()
 
   const navItems = [
-    { to: '/dashboard', label: labels.dashboard, icon: LayoutDashboard },
-    { to: '/invoices', label: labels.invoices, icon: FileText },
-    { to: '/copilot', label: labels.copilot, icon: Bot },
-    { to: '/transactions', label: labels.transactions, icon: ArrowLeftRight },
-    { to: '/reports', label: labels.reports, icon: FileBarChart },
-    { to: '/reconciliation', label: labels.reconciliation, icon: Receipt },
-    { to: '/documents', label: labels.documents, icon: FolderOpen },
-    { to: '/settings', label: labels.settings, icon: Settings },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/invoices', label: 'Invoices', icon: FileText },
+    { to: '/copilot', label: 'AI Copilot', icon: Bot },
+    { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+    { to: '/reports', label: 'Reports', icon: FileBarChart },
+    { to: '/reconciliation', label: 'Reconciliation', icon: Receipt },
+    { to: '/documents', label: 'Documents', icon: FolderOpen },
+    { to: '/settings', label: 'Settings', icon: Settings },
   ]
 
   return (
@@ -47,7 +45,7 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
           <span className="text-sm font-bold text-primary-foreground">FH</span>
         </div>
-        {!collapsed && <span className="font-semibold">{labels.appName}</span>}
+        {!collapsed && <span className="font-semibold">Finly Hub</span>}
       </div>
 
       <nav className="flex-1 space-y-1 p-2">
@@ -87,7 +85,7 @@ export function Sidebar() {
           variant="ghost"
           size="sm"
           className="w-full justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-          onClick={() => { logout(); navigate('/role-select') }}
+          onClick={() => { logout(); navigate('/login') }}
         >
           <LogOut className="h-4 w-4 shrink-0" />
           {!collapsed && <span className="ml-3">Log out</span>}

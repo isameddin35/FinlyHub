@@ -34,7 +34,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                 .anyRequest().authenticated()
             )

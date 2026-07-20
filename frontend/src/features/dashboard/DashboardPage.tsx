@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { FileText, FileSearch, ArrowLeftRight, Receipt, Clock, TrendingUp, TrendingDown } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
-import { useRoleLabels } from '@/hooks/useRoleLabels'
-
 function timeAgo(timestamp: string): string {
   const now = Date.now()
   const then = new Date(timestamp).getTime()
@@ -151,7 +149,19 @@ function ActivitySkeleton() {
 }
 
 export function DashboardPage() {
-  const labels = useRoleLabels()
+  const labels = {
+    dashboard: 'Dashboard',
+    financialOverview: 'Your financial overview at a glance',
+    invoicesProcessed: 'Invoices Processed',
+    documentsIndexed: 'Documents Indexed',
+    transactionsCategorized: 'Transactions Categorized',
+    reconciliations: 'Reconciliations',
+    hoursSaved: 'Hours Saved',
+    revenueVsExpenses: 'Revenue vs Expenses',
+    revenue: 'Revenue',
+    expenses: 'Expenses',
+    recentActivity: 'Recent Activity',
+  }
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['dashboard', 'metrics'],
     queryFn: async () => {

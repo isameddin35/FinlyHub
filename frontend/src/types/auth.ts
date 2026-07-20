@@ -9,7 +9,6 @@ export interface RegisterRequest {
   email: string
   password: string
   company?: string
-  role?: string
 }
 
 export interface AuthResponse {

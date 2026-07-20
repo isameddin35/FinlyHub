@@ -104,12 +104,8 @@ export function SettingsPage() {
             <span className="text-sm font-medium">{user?.email}</span>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
-            <span className="text-sm text-muted-foreground">Roles</span>
-            <div className="flex gap-1">
-              {user?.roles.map((role) => (
-                <Badge key={role} variant="secondary">{role}</Badge>
-              ))}
-            </div>
+              <span className="text-sm text-muted-foreground">Account</span>
+              <span className="text-sm font-medium">Active</span>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
             <span className="text-sm text-muted-foreground">Member since</span>

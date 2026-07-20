@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { RoleSelectPage } from '@/features/auth/RoleSelectPage'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/hooks/useAuth'
@@ -32,7 +31,6 @@ export default function App() {
         <ThemeProvider>
           <AuthProvider>
             <Routes>
-              <Route path="/role-select" element={<RoleSelectPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/" element={<AppLayout />}>
@@ -46,7 +44,7 @@ export default function App() {
                 <Route path="documents" element={<DocumentsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
-              <Route path="*" element={<Navigate to="/role-select" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
             <Toaster
               position="top-right"

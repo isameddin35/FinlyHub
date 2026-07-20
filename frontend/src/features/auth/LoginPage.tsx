@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,11 +10,8 @@ import toast from 'react-hot-toast'
 
 export function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth()
-  const [searchParams] = useSearchParams()
-  const role = searchParams.get('role')
-  const defaultEmail = role === 'accountant' ? 'accountant@finlyhub.com' : 'admin@finlyhub.com'
-  const [email, setEmail] = useState(defaultEmail)
-  const [password, setPassword] = useState('password')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
   if (isAuthenticated) {
@@ -62,19 +59,8 @@ export function LoginPage() {
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <Link to={role === 'accountant' ? '/register?role=accountant' : '/register'} className="text-primary hover:underline">Create one</Link>
+            <Link to="/register" className="text-primary hover:underline">Create one</Link>
           </p>
-          <div className="mt-4 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-            <p className="font-medium mb-1">Demo credentials:</p>
-            {role === 'accountant' ? (
-              <p>Accountant: accountant@finlyhub.com / password</p>
-            ) : (
-              <>
-                <p>Owner: admin@finlyhub.com / password</p>
-                <p>Viewer: viewer@finlyhub.com / password</p>
-              </>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>
