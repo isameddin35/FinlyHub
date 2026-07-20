@@ -6,7 +6,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 
 **Target:** Investor demo with realistic mock data.
 
-**Status:** MVP — all features implemented, ~27 bugs fixed, runs via `docker compose up`.
+**Status:** MVP — all features implemented, ~31+ bugs fixed, runs via `docker compose up`.
 
 ---
 
@@ -33,7 +33,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 | Charts | Recharts | 2.15 |
 | Markdown | react-markdown + remark-gfm | 10 / 4 |
 | Dialogs | @radix-ui/react-alert-dialog | 1.1 |
-| Deployment | Docker Compose | — |
+| Deployment | Docker Compose + GitHub Actions CI/CD | — |
 
 ---
 
@@ -41,7 +41,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 
 ```
 finlyhub/
-├── docker-compose.yml           # 3 services: postgres, backend, frontend
+├── docker-compose.yml           # 4 services: postgres, backend, frontend, ollama
 ├── .env                         # Shared env vars (DB, JWT, AI provider)
 ├── postgres/init.sql            # CREATE EXTENSION vector
 ├── uploads/                     # User-uploaded files (mounted volume)
@@ -52,7 +52,7 @@ finlyhub/
 │   └── src/main/java/com/finlyhub/
 │       ├── FinlyHubApplication.java
 │       ├── config/              # Security, CORS, JWT, Web, OpenAi, Health
-│       ├── common/              # AiService interface + impls, exceptions, DTOs, utils
+│       ├── common/              # AiService interface + impls, exceptions, DTOs, utils, bootstrap
 │       ├── auth/                # Register, login, refresh, JWT
 │       ├── user/                # Profile CRUD, roles
 │       ├── invoice/             # Upload → OCR → AI extraction → approval
@@ -94,7 +94,7 @@ finlyhub/
 - **Controllers**: Return `ResponseEntity<ApiResponse<T>>` using `ApiResponse.success()` / `ApiResponse.error()`.
 - **Services**: Inject via constructor (`@RequiredArgsConstructor`). Add `@Transactional(readOnly = true)` on read methods that access lazy associations.
 - **`@Lob` is banned.** Use `@Column(columnDefinition = "TEXT")` instead — `@Lob` forces CLOB/OID in PostgreSQL and causes `Bad value for type long` errors.
-- **Package structure**: `entity/`, `repository/`, `service/`, `controller/`, `dto/`, `mapper/` within each feature package.
+- **Package structure**: `entity/`, `repository/`, `service/`, `controller/`, `dto/`, `mapper/` within each feature package. Bootstrap logic lives in `common/bootstrap/`.
 
 ### Frontend (TypeScript/React)
 - **Named exports only.** No `export default` (except `App`).
@@ -118,6 +118,7 @@ finlyhub/
 - **Metadata / flexible data**: `JSONB`.
 - **IDs**: `BIGINT` for all FK columns.
 - **Seed data** uses `context: demo` to gate demo data. Always use `valueComputed` for FK references instead of hardcoded IDs.
+- **DemoAccountCloner** (`common/bootstrap/`, `@Profile("demo")`) clones admin data into 10 demo accounts (`demo01–demo10`) on startup — each demo user sees personalized invoices, transactions, conversations, documents, and reconciliations.
 
 ---
 
@@ -135,8 +136,8 @@ finlyhub/
 ## CI/CD Pipeline
 
 - **GitHub Actions** — `.github/workflows/deploy.yml` triggers on push to `main`
-- **Deploy**: SSH into EC2 via `appleboy/ssh-action`, runs `git pull && docker compose up -d --build`
-- **Secrets** stored in GitHub repo: `EC2_HOST`, `EC2_USERNAME`, `EC2_SSH_KEY`
+- **Deploy**: Uses `aws-actions/configure-aws-credentials` to auth, then `aws ssm send-command` to run `deploy/deploy.sh` on EC2 (`docker compose up -d --build`)
+- **Secrets** stored in GitHub repo: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - **Secrets for production** (JWT, DB password) stored in AWS SSM Parameter Store, fetched by `deploy/deploy.sh`
 
 ## Testing
@@ -144,6 +145,7 @@ finlyhub/
 - **No tests exist yet.** The project was built for a demo, not production.
 - **Verification**: Run `docker compose up -d` and test endpoints via curl or the frontend.
 - **Demo users**: `admin@finlyhub.com`, `accountant@finlyhub.com`, `viewer@finlyhub.com` — all with password `password`.
+- **Hallway demo accounts**: `demo01@finlyhub.com` through `demo10@finlyhub.com` — automatically cloned from admin data by `DemoAccountCloner`.
 
 ---
 

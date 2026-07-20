@@ -18,7 +18,7 @@
 - [x] **Backend Dockerfile** — Multi-stage (Maven build → Alpine JRE + Tesseract)
 - [x] **Frontend Vite project** — React 19, TypeScript 5.7, Tailwind 3.4, shadcn/ui
 - [x] **Frontend Dockerfile + nginx** — Multi-stage build, SPA fallback, `/api` proxy
-- [x] **Liquibase changelogs** — 11 YAML files (V001–V011), 42 changesets, 17 tables
+- [x] **Liquibase changelogs** — 15 YAML files (V001–V015), 56 changesets, 17 tables
 - [x] **JWT authentication** — Login/register/refresh with access + refresh tokens
 - [x] **Spring Security** — Stateless sessions, CORS, role-based guards
 - [x] **Global exception handler** — `@RestControllerAdvice` with typed HTTP codes
@@ -41,7 +41,7 @@
 - [x] **Frontend pages** — Login, Register, Dashboard, Invoices, Copilot, Transactions, Reports, Reconciliation, Documents, Settings
 - [x] **Frontend API layer** — 8 typed API modules with Axios interceptors
 - [x] **Frontend routing** — Authenticated layout, public auth pages, catch-all redirect
-- [x] **Seed demo data** — 3 users (admin/accountant/viewer), 5 invoices, 9 transactions, 2 documents + 6 chunks, 3 conversations + 8 messages, 1 reconciliation + 11 entries, 4 audit logs, 3 notifications
+- [x] **Seed demo data** — 3 base users (admin/accountant/viewer) via Liquibase, plus 10 demo accounts (`demo01–demo10`) via DemoAccountCloner; 5 invoices, 9 transactions, 2 documents + 6 chunks, 3 conversations + 8 messages, 1 reconciliation + 11 entries, 4 audit logs, 3 notifications per user
 
 ## Phase 3: Bugfixes & Stabilization
 
@@ -97,10 +97,15 @@
 - [x] **Confirmation dialogs for destructive actions** — Added `AlertDialog` component; applied to conversation + document delete
 - [x] **Password visibility toggle** — Eye/EyeOff button in password fields on Login and Register pages
 - [x] **Dynamic page title in header** — Header title updates based on current route
+- [x] **Role selection landing page** — `/role-select` with one-click demo login as admin/accountant/viewer; logout redirects back here
+- [x] **Demo account pool** — `DemoAccountCloner` creates 10 accounts with cloned admin data for hallway demos
+- [x] **Login redirect fix** — `navigate('/dashboard')` after demo login (was missing, landing on blank page)
 
 ## Known Issues
 
-- (none currently tracked)
+- **`VITE_API_URL` baked at build time** — Changing the env var at runtime has no effect in production; use nginx proxy fallback instead
+- **DemoAccountCloner fragile to schema changes** — Hand-written native SQL in `cloneDocuments`, `cloneReconciliationEntries`, `cloneAuditLogs` breaks silently if columns are added/removed
+- **No demo account pool for hall presentations** — Currently resolved: DemoAccountCloner creates 10 demo accounts, but runs only when `SPRING_PROFILES_ACTIVE=demo` and no demo accounts exist yet
 
 ## Future Enhancements
 

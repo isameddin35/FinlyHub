@@ -106,6 +106,9 @@ OPENAI_EMBEDDING_MODEL=nomic-embed-text
 OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
 OPENAI_EMBEDDING_API_KEY=ollama
 
+# CORS
+APP_CORS_ALLOWED_ORIGINS=https://finlyhub.org,https://www.finlyhub.org,http://localhost:5173,http://localhost:3000
+
 # Frontend
 VITE_API_URL=/api
 EOF

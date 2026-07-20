@@ -240,7 +240,8 @@ User approves → Reconciliation COMPLETED → APPROVED
             ▼                ▼
     ┌──────────────┐  ┌──────────────────────┐
     │ MockAiService │  │   OpenAiAiService    │
-    │ (default)     │  │  (ai.provider=openai)│
+    │(ai.provider=  │  │  (ai.provider=openai)│
+    │  mock)        │  │                      │
     │ deterministic │  │                      │
     │ random data   │  │  Dual OpenAiService  │
     │ no API key    │  │  ┌────────┐ ┌──────┐│
@@ -253,7 +254,7 @@ User approves → Reconciliation COMPLETED → APPROVED
                       └──────────────────────┘
 ```
 
-**Selection logic** (`OpenAiConfig.java`): `@ConditionalOnProperty(name = "ai.provider", havingValue = "openai")` creates `OpenAiAiService` with dual `OpenAiService` instances — one for chat (Groq) and one for embeddings (Ollama). Default (or `mock`) creates `MockAiService`.
+**Selection logic** (`OpenAiConfig.java`): `@ConditionalOnProperty(name = "ai.provider", havingValue = "openai")` creates `OpenAiAiService` with dual `OpenAiService` instances — one for chat (Groq) and one for embeddings (Ollama). When `ai.provider=mock` (or unset), `MockAiService` is created. The `.env` defaults to `AI_PROVIDER=openai`.
 
 **Groq path fix**: `OpenAiApi` uses `@POST("/v1/chat/completions")` — leading slash causes absolute path resolution in OkHttp, dropping `/openai/` from the base URL. An interceptor rewrites `/v1/{path}` → `/openai/v1/{path}` for the Groq client only.
 
@@ -305,14 +306,16 @@ User approves → Reconciliation COMPLETED → APPROVED
      │◀─────────────────────────────────│                             │
 ```
 
-**Token refresh:** On 401, frontend interceptor calls `POST /auth/refresh` with the stored `refreshToken`. On success, new tokens replace the old ones. On failure, user is redirected to `/login`.
+**Token refresh:** On 401, frontend interceptor calls `POST /auth/refresh` with the stored `refreshToken`. On success, new tokens replace the old ones. On failure, user is redirected to `/role-select`.
+
+**Demo login flow:** Landing at `/role-select` presents 3 demo user buttons (admin, accountant, viewer) with a "Login as Demo" option. After successful demo login, the user is navigated to `/dashboard`.
 
 ---
 
 ## Deployment Architecture
 
 ```
-Docker Compose (3 services)
+Docker Compose (4 services)
 ═══════════════════════════
 
 Network: finlyhub_default (bridge)
@@ -324,10 +327,19 @@ Image: pgvector/pgvector:pg16    Build: ./backend/Dockerfile      Build: ./front
 Port:  5432                      Port:  8080                      Port:  5173
 Vol:   pgdata:/var/lib/pgdata    Vol:  uploads:/app/uploads       (stateless)
        ./postgres/init.sql       Env:  SPRING_PROFILES_ACTIVE     Env:  (none at runtime)
-       (init script)                    SPRING_DATASOURCE_URL            VITE_API_URL baked at build
-                                        JWT_SECRET
-                                        AI_PROVIDER (mock|openai)
-       Health: pg_isready         Depends: postgres (healthy)      Depends: backend (basic)
+        (init script)                    SPRING_DATASOURCE_URL            VITE_API_URL baked at build
+                                         JWT_SECRET
+                                         AI_PROVIDER (mock|openai)
+        Health: pg_isready         Depends: postgres (healthy)      Depends: backend (basic)
+
+ollama
+──────
+Image: ollama/ollama:latest
+Port:  11434
+Vol:   ollama:/root/.ollama
+Entry: ollama pull nomic-embed-text
+Health: ollama list | grep -q nomic-embed-text
+Depends: (none)
 ```
 
 ### Build Process
@@ -373,4 +385,7 @@ Frontend:                     Backend:
 | **Liquibase YAML over Hibernate DDL** | Explicit, version-controlled, auditable migrations |
 | **Demo profile for seed data** | Clean separation: schema always, seed only for demo/investor preview |
 | **`ApiResponse<T>` envelope** | Consistent frontend error handling; every response has the same shape |
+| **DemoAccountCloner (bootstrap)** | `CommandLineRunner` clones admin's data (invoices, transactions, docs, chats, reconciliations, audit logs) into 10 demo accounts (`demo01–demo10`) for hallway demos — each user sees personalized data |
+| **`/role-select` landing page** | Guests land on role selection instead of raw login; one-click demo login as admin/accountant/viewer; logout returns to `/role-select` |
+| **Native SQL over JPA for bulk inserts** | `entityManager.createNativeQuery()` with `cast(? as vector)` / `cast(? as jsonb)` avoids `@Lob` pitfalls and type serialization errors in PostgreSQL |
 | **`SecurityUtils` static helper** | Avoids injecting `SecurityContextHolder` boilerplate in every service |
