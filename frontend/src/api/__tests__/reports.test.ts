@@ -16,10 +16,10 @@ describe('reportApi', () => {
     const mockPost = vi.mocked(apiClient.post)
     mockPost.mockResolvedValue({ data: { success: true } } as any)
 
-    await reportApi.generate({ title: 'Q1 Report', type: 'PROFIT_LOSS', periodStart: '2026-01-01', periodEnd: '2026-03-31' })
+    await reportApi.generate({ type: 'PROFIT_LOSS', subtype: 'annual', periodStart: '2026-01-01', periodEnd: '2026-03-31' })
 
     expect(mockPost).toHaveBeenCalledWith('/reports/generate', {
-      title: 'Q1 Report', type: 'PROFIT_LOSS', periodStart: '2026-01-01', periodEnd: '2026-03-31'
+      type: 'PROFIT_LOSS', subtype: 'annual', periodStart: '2026-01-01', periodEnd: '2026-03-31'
     })
   })
 

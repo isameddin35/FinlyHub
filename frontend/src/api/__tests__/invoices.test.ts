@@ -49,8 +49,8 @@ describe('invoiceApi', () => {
     const mockPut = vi.mocked(apiClient.put)
     mockPut.mockResolvedValue({ data: { success: true } } as any)
 
-    await invoiceApi.approve(1, { categoryId: 5 })
+    await invoiceApi.approve(1, { invoiceNumber: 'INV-001' })
 
-    expect(mockPut).toHaveBeenCalledWith('/invoices/1/approve', { categoryId: 5 })
+    expect(mockPut).toHaveBeenCalledWith('/invoices/1/approve', { invoiceNumber: 'INV-001' })
   })
 })

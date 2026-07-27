@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockFetch = vi.fn()
-global.fetch = mockFetch
+const mockFetch = vi.fn() as any
+globalThis.fetch = mockFetch
 
 describe('chatbotApi', () => {
   beforeEach(() => { vi.clearAllMocks() })
