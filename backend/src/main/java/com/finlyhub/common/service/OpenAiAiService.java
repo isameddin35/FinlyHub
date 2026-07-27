@@ -10,15 +10,13 @@ import com.theokanning.openai.OpenAiApi;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.completion.chat.ChatMessageRole;
-import com.theokanning.openai.embedding.EmbeddingRequest;
 import com.theokanning.openai.service.OpenAiService;
-import io.reactivex.Flowable;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.HttpUrl;
 import okhttp3.Request;
-import org.springframework.beans.factory.annotation.Value;
+
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -32,27 +30,20 @@ import java.util.function.Consumer;
 public class OpenAiAiService implements AiService {
 
     private OpenAiService openAiService;
-    private OpenAiService embeddingOpenAiService;
+    private final OnnxBgeEmbeddingService onnxEmbeddingService;
     private final String apiKey;
     private final String baseUrl;
     private final String model;
-    private final String embeddingModel;
-    private final String embeddingBaseUrl;
-    private final String embeddingApiKey;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OpenAiAiService(String baseUrl,
                             String apiKey,
-                            @Value("${ai.openai.model}") String model,
-                            @Value("${ai.openai.embedding-model}") String embeddingModel,
-                            @Value("${ai.openai.embedding-base-url}") String embeddingBaseUrl,
-                            @Value("${ai.openai.embedding-api-key}") String embeddingApiKey) {
+                            String model,
+                            OnnxBgeEmbeddingService onnxEmbeddingService) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.model = model;
-        this.embeddingModel = embeddingModel;
-        this.embeddingBaseUrl = embeddingBaseUrl;
-        this.embeddingApiKey = embeddingApiKey;
+        this.onnxEmbeddingService = onnxEmbeddingService;
     }
 
     @PostConstruct
@@ -84,23 +75,6 @@ public class OpenAiAiService implements AiService {
 
         OpenAiApi api = retrofit.create(OpenAiApi.class);
         this.openAiService = new OpenAiService(api);
-
-        OkHttpClient embeddingClient = OpenAiService.defaultClient(embeddingApiKey, Duration.ofSeconds(30))
-                .newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ofSeconds(30))
-                .writeTimeout(Duration.ofSeconds(30))
-                .build();
-
-        Retrofit embeddingRetrofit = new Retrofit.Builder()
-                .baseUrl(embeddingBaseUrl.endsWith("/") ? embeddingBaseUrl : embeddingBaseUrl + "/")
-                .client(embeddingClient)
-                .addConverterFactory(JacksonConverterFactory.create(mapper))
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .build();
-
-        OpenAiApi embeddingApi = embeddingRetrofit.create(OpenAiApi.class);
-        this.embeddingOpenAiService = new OpenAiService(embeddingApi);
     }
 
     @Override
@@ -214,7 +188,11 @@ public class OpenAiAiService implements AiService {
         if (request.getRelevantDocuments() != null) {
             for (SourceDocument doc : request.getRelevantDocuments()) {
                 systemPrompt.append("\n--- Source: ").append(doc.getFilename()).append(" ---\n");
-                systemPrompt.append(doc.getExcerpt()).append("\n");
+                String excerpt = doc.getExcerpt();
+                if (excerpt != null && excerpt.length() > 500) {
+                    excerpt = excerpt.substring(0, 500) + "...";
+                }
+                systemPrompt.append(excerpt).append("\n");
             }
         }
 
@@ -233,20 +211,21 @@ public class OpenAiAiService implements AiService {
 
     @Override
     public List<Float> generateEmbedding(String text) {
-        EmbeddingRequest request = EmbeddingRequest.builder()
-                .model(embeddingModel)
-                .input(List.of(text))
-                .build();
-
         try {
-            List<Double> doubles = embeddingOpenAiService.createEmbeddings(request)
-                    .getData().get(0).getEmbedding();
-            return doubles.stream()
-                    .map(Double::floatValue)
-                    .toList();
+            return onnxEmbeddingService.embed(text);
         } catch (Exception e) {
-            log.error("Embedding API failed, returning empty results", e);
+            log.error("ONNX embedding failed, returning empty results", e);
             return List.of();
+        }
+    }
+
+    @Override
+    public List<List<Float>> generateEmbeddings(List<String> texts) {
+        try {
+            return onnxEmbeddingService.embedBatch(texts);
+        } catch (Exception e) {
+            log.error("ONNX batch embedding failed, returning empty results", e);
+            return texts.stream().map(t -> List.<Float>of()).toList();
         }
     }
 

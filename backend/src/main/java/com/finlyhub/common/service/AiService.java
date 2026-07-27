@@ -16,6 +16,10 @@ public interface AiService {
 
     List<Float> generateEmbedding(String text);
 
+    default List<List<Float>> generateEmbeddings(List<String> texts) {
+        return texts.stream().map(this::generateEmbedding).toList();
+    }
+
     CategorizationResult categorizeTransaction(String description, double amount);
 
     default void streamChat(ChatRequest request, Consumer<String> onToken, Runnable onComplete) {

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,9 +22,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DocumentProcessingService {
 
-    private static final int EMBEDDING_DIM = 768;
+    private static final int EMBEDDING_DIM = 384;
     private static final int EMBEDDING_MAX_RETRIES = 3;
     private static final long EMBEDDING_RETRY_DELAY_MS = 1000;
+    private static final int BATCH_SIZE = 32;
 
     private final DocumentRepository documentRepository;
     private final DocumentParserService parserService;
@@ -67,6 +69,8 @@ public class DocumentProcessingService {
                 return;
             }
 
+            List<List<Float>> embeddings = generateEmbeddingsWithRetry(chunks);
+
             String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at) VALUES (?, ?, ?, ?, ?, cast(? as vector), NOW())";
 
             int insertedCount = 0;
@@ -77,7 +81,7 @@ public class DocumentProcessingService {
                 int tokenCount = parserService.countTokens(chunkText);
 
                 try {
-                    List<Float> embeddingVector = generateEmbeddingWithRetry(chunkText);
+                    List<Float> embeddingVector = (i < embeddings.size()) ? embeddings.get(i) : List.of();
                     String embeddingStr;
                     if (embeddingVector == null || embeddingVector.isEmpty()) {
                         embeddingStr = buildZeroVector();
@@ -122,14 +126,21 @@ public class DocumentProcessingService {
         }
     }
 
-    private List<Float> generateEmbeddingWithRetry(String text) {
+    private List<List<Float>> generateEmbeddingsWithRetry(List<String> chunks) {
         for (int attempt = 1; attempt <= EMBEDDING_MAX_RETRIES; attempt++) {
             try {
-                List<Float> result = aiService.generateEmbedding(text);
-                if (result != null && !result.isEmpty()) {
-                    return result;
+                List<List<Float>> results = new ArrayList<>();
+                for (int batchStart = 0; batchStart < chunks.size(); batchStart += BATCH_SIZE) {
+                    List<String> batch = chunks.subList(batchStart, Math.min(batchStart + BATCH_SIZE, chunks.size()));
+                    List<List<Float>> batchResults = aiService.generateEmbeddings(batch);
+                    results.addAll(batchResults);
                 }
-                log.warn("Embedding attempt {}/{} returned empty", attempt, EMBEDDING_MAX_RETRIES);
+                long nonEmpty = results.stream().filter(e -> e != null && !e.isEmpty()).count();
+                if (nonEmpty > 0) {
+                    log.info("Embedded {}/{} chunks successfully", nonEmpty, chunks.size());
+                    return results;
+                }
+                log.warn("Embedding attempt {}/{} returned all empty", attempt, EMBEDDING_MAX_RETRIES);
             } catch (Exception e) {
                 log.warn("Embedding attempt {}/{} failed: {}", attempt, EMBEDDING_MAX_RETRIES, e.getMessage());
             }
@@ -138,11 +149,11 @@ public class DocumentProcessingService {
                     Thread.sleep(EMBEDDING_RETRY_DELAY_MS * attempt);
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    return List.of();
+                    return chunks.stream().map(t -> List.<Float>of()).toList();
                 }
             }
         }
-        return List.of();
+        return chunks.stream().map(t -> List.<Float>of()).toList();
     }
 
     private String buildZeroVector() {

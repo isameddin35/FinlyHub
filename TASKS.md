@@ -73,16 +73,16 @@
 - [x] **Fix reconciliation status String vs enum comparison** — `"APPROVED".equals(r.getStatus())` always false with enum
 - [x] **Fix auto-categorization never triggered after import** — Injected `TransactionCategorizationService` into `TransactionImportService`, calls `categorizeBatch()` after `saveAll()`
 - [x] **Fix combobox transparency** — Added missing `--popover` CSS variables and Tailwind color mapping
-- [x] **Switch from Ollama chat to Groq** — Dual `OpenAiService`: Groq for chat (llama-3.1-8b-instant), Ollama for embeddings (nomic-embed-text only)
+- [x] **Switch from Ollama to Groq + ONNX** — Groq for chat (llama-3.1-8b-instant), ONNX Runtime + DJL for embeddings (bge-small-en-v1.5, 384-dim); Ollama fully removed
 - [x] **Fix Groq URL mismatch** — OkHttp interceptor rewrites `/v1/` → `/openai/v1/` to fix absolute-path resolution
-- [x] **Fix embedding connection inside Docker** — Changed `OPENAI_EMBEDDING_BASE_URL` from `localhost:11434` to `http://ollama:11434`
+- [x] **Fix embedding connection inside Docker** — Replaced Ollama-based embeddings with in-JVM ONNX Runtime + DJL (bge-small-en-v1.5, 384-dim); no external embedding service needed
 - [x] **Fix currency format error** — Updated extraction prompt for ISO 4217 codes; `formatCurrency` in utils maps symbols and wraps in try/catch
 - [x] **Chat duplication fix** (backend) — Moved `messageRepository.save(userMessage)` after `ChatRequest.build()`
 - [x] **Chat duplication fix** (frontend) — Replaced `optimisticMessages` with `pendingUserMessage` string state
 - [x] **Message alignment fix** — All `msg.role` comparisons use `.toLowerCase()`
 - [x] **Embedding fallback** — `generateEmbedding()` returns `List.of()` on failure
 - [x] **Vector operator** — Changed `<->` (L2) to `<=>` (cosine) with similarity score in `SourceDocument.relevanceScore`
-- [x] **Ollama slimmed** — Removed `ollama pull qwen2:1.5b` from entrypoint; healthcheck checks `nomic-embed-text`
+- [x] **Ollama removed** — Replaced with in-JVM ONNX embeddings (bge-small-en-v1.5); Ollama service no longer required
 - [x] **User isolation for RAG** — `searchRelevantDocuments()` JOINs `document_chunks` with `documents` on `document_id`
 - [x] **Fixed document upload INSERT** — Replaced `chunkRepository.saveAll()` with native SQL `INSERT ... cast(? as vector)`
 - [x] **Added approved invoices Excel export** — `GET /api/invoices/export` returns XLSX workbook via `XSSFWorkbook`

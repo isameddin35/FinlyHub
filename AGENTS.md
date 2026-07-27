@@ -24,8 +24,8 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 | Office | Apache POI | 5.3.0 |
 | AI (Mock) | MockAiService (built-in) | — |
 | AI (Groq Chat) | Groq via com.theokanning.openai-gpt3-java | 0.18.2 |
-| AI (Ollama Embeddings) | Ollama via com.theokanning.openai-gpt3-java | 0.18.2 |
-| Embedding dims | nomic-embed-text → 768-dim vectors | — |
+| AI (Embeddings) | ONNX Runtime + DJL Tokenizers (bge-small-en-v1.5) | in-JVM |
+| Embedding dims | bge-small-en-v1.5 → 384-dim vectors | — |
 | Frontend | React + TypeScript | 19 / 5.7 |
 | Bundler | Vite | 6 |
 | Styling | Tailwind CSS + shadcn/ui + Radix UI | 3.4 |
@@ -41,7 +41,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 
 ```
 finlyhub/
-├── docker-compose.yml           # 4 services: postgres, backend, frontend, ollama
+├── docker-compose.yml           # 3 services: postgres, backend, frontend
 ├── .env                         # Shared env vars (DB, JWT, AI provider)
 ├── postgres/init.sql            # CREATE EXTENSION vector
 ├── uploads/                     # User-uploaded files (mounted volume)

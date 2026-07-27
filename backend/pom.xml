@@ -131,6 +131,18 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- ONNX Runtime for fast local embeddings (bge-small-en-v1.5, 384-dim) -->
+        <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+            <version>1.20.0</version>
+        </dependency>
+        <dependency>
+            <groupId>ai.djl.huggingface</groupId>
+            <artifactId>tokenizers</artifactId>
+            <version>0.31.0</version>
+        </dependency>
+
         <!-- Apache XChart for server-side chart generation -->
         <dependency>
             <groupId>org.knowm.xchart</groupId>

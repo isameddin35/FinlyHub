@@ -88,11 +88,16 @@ public class MockAiService implements AiService {
 
     @Override
     public List<Float> generateEmbedding(String text) {
-        List<Float> embedding = new ArrayList<>(768);
-        for (int i = 0; i < 768; i++) {
+        List<Float> embedding = new ArrayList<>(384);
+        for (int i = 0; i < 384; i++) {
             embedding.add((float) random.nextGaussian());
         }
         return embedding;
+    }
+
+    @Override
+    public List<List<Float>> generateEmbeddings(List<String> texts) {
+        return texts.stream().map(this::generateEmbedding).toList();
     }
 
     @Override

@@ -29,3 +29,7 @@ databaseChangeLog:
       file: db/changelog/V014__reindex_demo_chunks.yaml
   - include:
       file: db/changelog/V015__seed_more_demo_documents.yaml
+  - include:
+      file: db/changelog/V016__remove_accountant_role.yaml
+  - include:
+      file: db/changelog/V017__embedding_384dim.yaml
