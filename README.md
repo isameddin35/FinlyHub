@@ -65,7 +65,7 @@ npm run dev
 
 ### Demo Mode
 
-The default configuration uses `AI_PROVIDER=openai` (Groq for chat, Ollama for embeddings). On first launch, Liquibase seeds demo data (users, invoices, transactions) and a `CommandLineRunner` provisions 10 sandbox accounts with cloned data.
+The default configuration uses `AI_PROVIDER=openai` (Groq for chat, Ollama for embeddings). On first launch, Liquibase seeds demo data (users, invoices, transactions).
 
 **Demo accounts** (password: `password`):
 
@@ -74,7 +74,6 @@ The default configuration uses `AI_PROVIDER=openai` (Groq for chat, Ollama for e
 | admin@finlyhub.com | ADMIN, ACCOUNTANT |
 | accountant@finlyhub.com | ACCOUNTANT |
 | viewer@finlyhub.com | VIEWER |
-| demo01@finlyhub.com … demo10@finlyhub.com | ADMIN |
 
 ### Production Mode (with Groq + Ollama)
 
@@ -123,7 +122,7 @@ finlyhub/
 │   │   ├── reconciliation/    # Bank reconciliation
 │   │   ├── audit/             # Audit logging
 │   │   ├── dashboard/         # Metrics & activity
-│   │   ├── common/            # Shared services, models & bootstrap
+│   │   ├── common/            # Shared services, models & utilities
 │   │   └── config/            # Security, CORS, AI config
 │   ├── src/main/resources/db/changelog/  # Liquibase migrations
 │   └── pom.xml

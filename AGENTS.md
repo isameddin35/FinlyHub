@@ -52,7 +52,7 @@ finlyhub/
 │   └── src/main/java/com/finlyhub/
 │       ├── FinlyHubApplication.java
 │       ├── config/              # Security, CORS, JWT, Web, OpenAi, Health
-│       ├── common/              # AiService interface + impls, exceptions, DTOs, utils, bootstrap
+│       ├── common/              # AiService interface + impls, exceptions, DTOs, utils
 │       ├── auth/                # Register, login, refresh, JWT
 │       ├── user/                # Profile CRUD, roles
 │       ├── invoice/             # Upload → OCR → AI extraction → approval
@@ -94,7 +94,7 @@ finlyhub/
 - **Controllers**: Return `ResponseEntity<ApiResponse<T>>` using `ApiResponse.success()` / `ApiResponse.error()`.
 - **Services**: Inject via constructor (`@RequiredArgsConstructor`). Add `@Transactional(readOnly = true)` on read methods that access lazy associations.
 - **`@Lob` is banned.** Use `@Column(columnDefinition = "TEXT")` instead — `@Lob` forces CLOB/OID in PostgreSQL and causes `Bad value for type long` errors.
-- **Package structure**: `entity/`, `repository/`, `service/`, `controller/`, `dto/`, `mapper/` within each feature package. Bootstrap logic lives in `common/bootstrap/`.
+- **Package structure**: `entity/`, `repository/`, `service/`, `controller/`, `dto/`, `mapper/` within each feature package.
 
 ### Frontend (TypeScript/React)
 - **Named exports only.** No `export default` (except `App`).
@@ -118,7 +118,6 @@ finlyhub/
 - **Metadata / flexible data**: `JSONB`.
 - **IDs**: `BIGINT` for all FK columns.
 - **Seed data** uses `context: demo` to gate demo data. Always use `valueComputed` for FK references instead of hardcoded IDs.
-- **DemoAccountCloner** (`common/bootstrap/`, `@Profile("demo")`) clones admin data into 10 demo accounts (`demo01–demo10`) on startup — each demo user sees personalized invoices, transactions, conversations, documents, and reconciliations.
 
 ---
 
@@ -145,7 +144,6 @@ finlyhub/
 - **No tests exist yet.** The project was built for a demo, not production.
 - **Verification**: Run `docker compose up -d` and test endpoints via curl or the frontend.
 - **Demo users**: `admin@finlyhub.com`, `accountant@finlyhub.com`, `viewer@finlyhub.com` — all with password `password`.
-- **Hallway demo accounts**: `demo01@finlyhub.com` through `demo10@finlyhub.com` — automatically cloned from admin data by `DemoAccountCloner`.
 
 ---
 

@@ -7,13 +7,15 @@ export const documentApi = {
     const formData = new FormData()
     formData.append('file', file)
     return apiClient.post<ApiResponse<Document>>('/documents/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 'Content-Type': undefined },
     })
   },
 
   list: () => apiClient.get<ApiResponse<Document[]>>('/documents'),
 
   delete: (id: number) => apiClient.delete<ApiResponse<void>>(`/documents/${id}`),
+
+  reprocess: (id: number) => apiClient.post<ApiResponse<string>>(`/documents/${id}/reprocess`),
 
   download: (id: number) =>
     apiClient.get(`/documents/${id}/download`, { responseType: 'blob' }),

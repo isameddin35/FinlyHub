@@ -1,8 +1,15 @@
 import axios from 'axios'
 import type { ApiResponse } from '@/types/api'
 
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.__ENV__?.API_URL) {
+    return window.__ENV__.API_URL
+  }
+  return import.meta.env.VITE_API_URL || '/api'
+}
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: getBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
 })
 

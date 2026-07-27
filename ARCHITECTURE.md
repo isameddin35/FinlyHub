@@ -385,7 +385,6 @@ Frontend:                     Backend:
 | **Liquibase YAML over Hibernate DDL** | Explicit, version-controlled, auditable migrations |
 | **Demo profile for seed data** | Clean separation: schema always, seed only for demo/investor preview |
 | **`ApiResponse<T>` envelope** | Consistent frontend error handling; every response has the same shape |
-| **DemoAccountCloner (bootstrap)** | `CommandLineRunner` clones admin's data (invoices, transactions, docs, chats, reconciliations, audit logs) into 10 demo accounts (`demo01–demo10`) for hallway demos — each user sees personalized data |
 | **`/role-select` landing page** | Guests land on role selection instead of raw login; one-click demo login as admin/accountant/viewer; logout returns to `/role-select` |
 | **Native SQL over JPA for bulk inserts** | `entityManager.createNativeQuery()` with `cast(? as vector)` / `cast(? as jsonb)` avoids `@Lob` pitfalls and type serialization errors in PostgreSQL |
 | **`SecurityUtils` static helper** | Avoids injecting `SecurityContextHolder` boilerplate in every service |

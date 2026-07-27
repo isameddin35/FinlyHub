@@ -26,15 +26,18 @@ public class DocumentParserService {
         if (filename == null) {
             throw new IllegalArgumentException("Filename is required");
         }
+        return parseByFilename(file.getInputStream(), filename);
+    }
 
+    public String parseByFilename(java.io.InputStream inputStream, String filename) throws IOException {
         String lower = filename.toLowerCase();
 
         if (lower.endsWith(".pdf")) {
-            return parsePdf(file);
+            return parsePdf(inputStream);
         } else if (lower.endsWith(".docx")) {
-            return parseDocx(file);
+            return parseDocx(inputStream);
         } else if (lower.endsWith(".txt")) {
-            return parseTxt(file);
+            return parseTxt(inputStream);
         } else {
             throw new IllegalArgumentException("Unsupported file type: " + filename);
         }
@@ -72,24 +75,24 @@ public class DocumentParserService {
         return text.split("\\s+").length;
     }
 
-    private String parsePdf(MultipartFile file) throws IOException {
-        try (PDDocument document = Loader.loadPDF(file.getBytes())) {
+    private String parsePdf(java.io.InputStream inputStream) throws IOException {
+        try (PDDocument document = Loader.loadPDF(inputStream.readAllBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             return stripper.getText(document);
         }
     }
 
-    private String parseDocx(MultipartFile file) throws IOException {
-        try (XWPFDocument docx = new XWPFDocument(file.getInputStream())) {
+    private String parseDocx(java.io.InputStream inputStream) throws IOException {
+        try (XWPFDocument docx = new XWPFDocument(inputStream)) {
             XWPFWordExtractor extractor = new XWPFWordExtractor(docx);
             return extractor.getText();
         }
     }
 
-    private String parseTxt(MultipartFile file) throws IOException {
+    private String parseTxt(java.io.InputStream inputStream) throws IOException {
         StringBuilder text = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+                new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 text.append(line).append("\n");

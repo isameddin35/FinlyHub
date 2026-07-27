@@ -145,7 +145,7 @@ public class OpenAiAiService implements AiService {
                 .model(model)
                 .messages(messages)
                 .temperature(0.3)
-                .maxTokens(1000)
+                .maxTokens(2048)
                 .build();
 
         try {
@@ -171,7 +171,7 @@ public class OpenAiAiService implements AiService {
                 .model(model)
                 .messages(messages)
                 .temperature(0.3)
-                .maxTokens(1000)
+                .maxTokens(2048)
                 .stream(true)
                 .build();
 
@@ -198,10 +198,17 @@ public class OpenAiAiService implements AiService {
         List<ChatMessage> messages = new ArrayList<>();
 
         StringBuilder systemPrompt = new StringBuilder("""
-                You are an expert accounting assistant. Answer questions based on the provided documentation.
-                Always cite your sources. If you don't know, say so.
+                You are an expert accounting assistant for FinlyHub. Answer the user's question based ONLY on the provided documentation chunks below.
+
+                Rules:
+                - Base your answer strictly on the provided context. Do not add information that is not in the sources.
+                - If the provided context does not contain enough information to answer, say "I don't have enough information in the uploaded documents to answer that."
+                - Cite which source(s) you used. Use the filename when referencing a source.
+                - Respond in the same language as the user's question.
+                - Format your answer clearly with headings, bullet points, or tables when helpful.
+                - Do not fabricate URLs, section numbers, or legal citations that are not in the provided text.
                 
-                Relevant documentation:
+                Provided document context:
                 """);
 
         if (request.getRelevantDocuments() != null) {

@@ -76,6 +76,12 @@ public class DocumentController {
         return ResponseEntity.ok(ApiResponse.success("Document deleted successfully", null));
     }
 
+    @PostMapping("/{id}/reprocess")
+    public ResponseEntity<ApiResponse<String>> reprocessDocument(@PathVariable Long id) {
+        documentService.reprocessDocument(id);
+        return ResponseEntity.ok(ApiResponse.success("Document queued for reprocessing", null));
+    }
+
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> downloadDocument(@PathVariable Long id) {
         Document document = documentService.getDocumentById(id);
