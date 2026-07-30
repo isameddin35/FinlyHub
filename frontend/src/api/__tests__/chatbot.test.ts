@@ -1,72 +1,67 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { chatbotApi } from '@/api/chatbot'
+import apiClient from '@/api/client'
+import { mockApiResponse } from './test-utils'
 
-const mockFetch = vi.fn() as any
-globalThis.fetch = mockFetch
+vi.mock('@/api/client', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    defaults: { baseURL: '/api' },
+  },
+}))
 
 describe('chatbotApi', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
-  it('createConversation posts to /api/chat/conversations', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true, data: { id: 1, title: 'Test' } }),
-    } as any)
+  it('createConversation posts to /chat/conversations', async () => {
+    const mockPost = vi.mocked(apiClient.post)
+    mockPost.mockResolvedValue(mockApiResponse({ id: 1, title: 'Test' }))
 
-    const { chatbotApi } = await import('@/api/chatbot')
     const result = await chatbotApi.createConversation({ title: 'Test' })
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/chat/conversations', expect.objectContaining({ method: 'POST' }))
+    expect(mockPost).toHaveBeenCalledWith('/chat/conversations', { title: 'Test' })
     expect(result.title).toBe('Test')
   })
 
-  it('listConversations gets /api/chat/conversations', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true, data: [] }),
-    } as any)
+  it('listConversations gets /chat/conversations', async () => {
+    const mockGet = vi.mocked(apiClient.get)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
-    const { chatbotApi } = await import('@/api/chatbot')
     const result = await chatbotApi.listConversations()
 
-    expect(mockFetch.mock.calls[0][0]).toBe('/api/chat/conversations')
+    expect(mockGet).toHaveBeenCalledWith('/chat/conversations')
     expect(result).toEqual([])
   })
 
   it('sendMessage posts to conversation messages', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true, data: { id: 100, content: 'Reply' } }),
-    } as any)
+    const mockPost = vi.mocked(apiClient.post)
+    mockPost.mockResolvedValue(mockApiResponse({ id: 100, content: 'Reply' }))
 
-    const { chatbotApi } = await import('@/api/chatbot')
     const result = await chatbotApi.sendMessage(1, { message: 'Hello' })
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/chat/conversations/1/messages', expect.objectContaining({ method: 'POST' }))
+    expect(mockPost).toHaveBeenCalledWith('/chat/conversations/1/messages', { message: 'Hello' })
     expect(result.content).toBe('Reply')
   })
 
   it('getMessages gets conversation messages', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true, data: [] }),
-    } as any)
+    const mockGet = vi.mocked(apiClient.get)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
-    const { chatbotApi } = await import('@/api/chatbot')
     const result = await chatbotApi.getMessages(1)
 
-    expect(mockFetch.mock.calls[0][0]).toBe('/api/chat/conversations/1/messages')
+    expect(mockGet).toHaveBeenCalledWith('/chat/conversations/1/messages')
     expect(result).toEqual([])
   })
 
   it('deleteConversation deletes conversation', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true }),
-    } as any)
+    const mockDelete = vi.mocked(apiClient.delete)
+    mockDelete.mockResolvedValue(mockApiResponse(null))
 
-    const { chatbotApi } = await import('@/api/chatbot')
     await chatbotApi.deleteConversation(1)
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/chat/conversations/1', expect.objectContaining({ method: 'DELETE' }))
+    expect(mockDelete).toHaveBeenCalledWith('/chat/conversations/1')
   })
 })

@@ -1,6 +1,5 @@
-// @ts-nocheck
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { FinlyHubLogin } from "./FinlyHubLogin";
 import { FinlyHubSignup } from "./FinlyHubSignup";
@@ -562,6 +561,20 @@ const CSS = `
 .fh-cta-row svg{ width:14px;height:14px; stroke:rgb(var(--ax,37),var(--ay,99),var(--az,235)); fill:none; stroke-width:2.2; transition:transform 0.35s ease; }
 .fh-card:hover .fh-cta-row svg{ transform:translateX(3px); }
 
+.fh-single-cta{
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  padding:48px 64px; border-radius:24px; border:none;
+  background:linear-gradient(135deg, #2563EB 0%, #3B82F6 45%, #7C3AED 100%);
+  color:#fff; cursor:pointer; position:relative; z-index:2;
+  box-shadow:0 12px 40px -12px rgba(37,99,235,0.5);
+  transition:transform 0.25s ease, box-shadow 0.25s ease;
+  font-family:'Inter', sans-serif;
+}
+.fh-single-cta:hover{ transform:translateY(-3px); box-shadow:0 20px 50px -12px rgba(37,99,235,0.6); }
+.fh-single-cta-icon{ width:32px; height:32px; stroke:#fff; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.fh-single-cta-label{ font-family:'Poppins', sans-serif; font-weight:700; font-size:20px; letter-spacing:-0.01em; }
+.fh-single-cta-sub{ font-size:13px; opacity:0.85; }
+
 .fh-float-widget{
   position:absolute;
   width:200px;
@@ -661,11 +674,48 @@ const CSS = `
   .fh-cta-section{ padding:40px 0 80px; }
 }
 .fh-root a:focus-visible, .fh-root .fh-card:focus-visible{ outline:2px solid var(--blue); outline-offset:4px; }
+
+.dark .fh-root{ --bg:#0F172A; --navy:#F1F5F9; --slate:#E2E8F0; --grey:#94A3B8; --border:#334155; --blue-soft:rgba(37,99,235,0.12); --bg-tint:#0F172A; }
+.dark .fh-card{ background:rgba(15,23,42,0.8); border-color:rgba(51,65,85,0.6); }
+.dark .fh-hero-sub{ color:#94A3B8; }
+.dark .fh-demo-tag{ background:rgba(37,99,235,0.12); color:#60A5FA; }
+.dark .fh-section-title{ color:#F1F5F9; }
+.dark .fh-intro{ color:#94A3B8; }
+.dark .fh-value-card{ background:rgba(15,23,42,0.8); border-color:#334155; }
+.dark .fh-value-title{ color:#F1F5F9; }
+.dark .fh-value-desc{ color:#94A3B8; }
+.dark .fh-signin-btn{ background:rgba(30,41,59,0.8); border-color:#334155; color:#F1F5F9; }
+.dark .fh-signin-btn:hover{ background:rgba(51,65,85,0.6); }
+.dark .fh-nav{ background:rgba(15,23,42,0.75); border-color:rgba(51,65,85,0.4); }
+.dark .fh-nav-title{ color:#F1F5F9; }
+.dark .fh-plan-name{ color:#F1F5F9; }
+.dark .fh-plan-desc{ color:#94A3B8; }
+.dark .fh-plan-features{ color:#E2E8F0; }
+.dark .fh-eyebrow{ background:rgba(30,41,59,0.8); border-color:rgba(59,130,246,0.2); }
+.dark .fh-video-card{ border-color:#334155; }
+.dark .fh-video-caption{ color:#94A3B8; }
+.dark .fh-video-caption b{ color:#E2E8F0; }
+.dark .fh-scroll-hint .fh-mouse{ background:rgba(30,41,59,0.8); border-color:rgba(59,130,246,0.3); }
+.dark .fh-value-card h3{ color:#F1F5F9; }
+.dark .fh-value-card p{ color:#94A3B8; }
+.dark .fh-card-index{ color:rgba(148,163,184,0.25); }
+.dark .fh-float-widget{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fh-widget-title{ color:#F1F5F9; }
+.dark .fh-widget-badge{ background:rgba(22,163,74,0.15); color:#4ADE80; }
+.dark .fh-invoice-row{ color:#94A3B8; border-color:#1E293B; }
+.dark .fh-invoice-row span:last-child{ color:#E2E8F0; }
+.dark .fh-invoice-total{ border-color:#334155; }
+.dark .fh-signin{ color:#94A3B8; }
+.dark .fh-login-overlay{ background:rgba(0,0,0,0.6); }
+.dark .fh-login-overlay .fh-login-close{ background:rgba(30,41,59,0.9); border-color:#334155; }
+.dark .fh-login-overlay .fh-login-close:hover{ background:rgba(51,65,85,0.9); }
 `;
 
 /* ---------- small presentational helpers ---------- */
 
-function Shattered({ text, id, accent, wordRef }) {
+function Shattered({ text, id, accent, wordRef }: {
+  text: string; id: string; accent?: boolean; wordRef: React.RefObject<HTMLSpanElement | null>;
+}) {
   // Builds the letter spans with randomized shatter start positions,
   // same approach as the original shatterify() function.
   const chars = [...text];
@@ -697,7 +747,7 @@ function Shattered({ text, id, accent, wordRef }) {
               "--dy": dy.toFixed(1) + "px",
               "--rot": rot.toFixed(1) + "deg",
               "--delay": delay.toFixed(2) + "s",
-            }}
+            } as React.CSSProperties}
           >
             {ch === " " ? "\u00A0" : ch}
           </span>
@@ -707,77 +757,19 @@ function Shattered({ text, id, accent, wordRef }) {
   );
 }
 
-/* Card that self-registers with the shared IntersectionObserver for
-   reveal + in-view driven animation, and handles its own tilt/spotlight.
-   Accepts an onClick so the parent can react to card selection (used
-   here to pick which dashboard/plan the person lands on). */
-function TiltCard({ colorVar, children, ariaLabel, registerReveal, onClick }) {
-  const ref = useRef(null);
+
+
+function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal }: {
+  index: number; ax: string; ay: string; az: string; icon: React.ReactNode;
+  title: string; text: string; delay: string; registerReveal: (el: Element) => void;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     registerReveal(el);
-
-    const MAX_TILT = 7;
-    const onEnter = () => el.classList.add("fh-tilting");
-    const onMove = (e) => {
-      const r = el.getBoundingClientRect();
-      const px = e.clientX - r.left;
-      const py = e.clientY - r.top;
-      el.style.setProperty("--mx", px + "px");
-      el.style.setProperty("--my", py + "px");
-      const nx = px / r.width - 0.5;
-      const ny = py / r.height - 0.5;
-      el.style.setProperty("--ry", nx * MAX_TILT * 2 + "deg");
-      el.style.setProperty("--rx", -ny * MAX_TILT * 2 + "deg");
-      el.style.setProperty("--lift", "-8px");
-    };
-    const onLeave = () => {
-      el.style.setProperty("--rx", "0deg");
-      el.style.setProperty("--ry", "0deg");
-      el.style.setProperty("--lift", "0px");
-      setTimeout(() => el.classList.remove("fh-tilting"), 250);
-    };
-    el.addEventListener("mouseenter", onEnter);
-    el.addEventListener("mousemove", onMove);
-    el.addEventListener("mouseleave", onLeave);
-    return () => {
-      el.removeEventListener("mouseenter", onEnter);
-      el.removeEventListener("mousemove", onMove);
-      el.removeEventListener("mouseleave", onLeave);
-    };
-  }, [registerReveal]);
-
-  return (
-    <article
-      className="fh-card fh-reveal-on-scroll"
-      ref={ref}
-      tabIndex={0}
-      role="button"
-      aria-label={ariaLabel}
-      style={colorVar}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if ((e.key === "Enter" || e.key === " ") && onClick) {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-    >
-      {children}
-    </article>
-  );
-}
-
-function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    registerReveal(el);
-    const onMove = (e) => {
+    const onMove = (e: MouseEvent) => {
       const r = el.getBoundingClientRect();
       el.style.setProperty("--mx", e.clientX - r.left + "px");
       el.style.setProperty("--my", e.clientY - r.top + "px");
@@ -790,7 +782,7 @@ function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal
     <div
       className="fh-value-card fh-reveal-on-scroll"
       ref={ref}
-      style={{ transitionDelay: delay, "--ax": ax, "--ay": ay, "--az": az }}
+      style={{ transitionDelay: delay, "--ax": ax, "--ay": ay, "--az": az } as React.CSSProperties}
     >
       <span className="fh-card-index">{index}</span>
       <div className="fh-value-icon">{icon}</div>
@@ -802,7 +794,6 @@ function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal
 
 export function FinlyHubLanding() {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const rootRef = useRef<HTMLDivElement>(null);
   const wordWelcomeRef = useRef<HTMLSpanElement>(null);
   const wordFinlyRef = useRef<HTMLSpanElement>(null);
@@ -831,7 +822,7 @@ export function FinlyHubLanding() {
     const dustLayer = dustLayerRef.current;
     if (!dustLayer) return;
     const count = 26;
-    const nodes = [];
+    const nodes: HTMLElement[] = [];
     for (let i = 0; i < count; i++) {
       const d = document.createElement("span");
       d.className = "fh-dust";
@@ -872,12 +863,12 @@ export function FinlyHubLanding() {
 
   /* ---------- Count-up + IntersectionObserver reveal ---------- */
   useEffect(() => {
-    function runCountUp(el) {
-      const target = parseFloat(el.dataset.countTo);
-      const prefix = el.dataset.prefix || "";
+    function runCountUp(el: Element) {
+      const target = parseFloat(el.getAttribute("data-count-to") ?? "");
+      const prefix = el.getAttribute("data-prefix") || "";
       const duration = 1600;
       const start = performance.now();
-      function tick(now) {
+      function tick(now: number) {
         const p = Math.min(1, (now - start) / duration);
         const eased = 1 - Math.pow(1 - p, 3);
         const value = Math.floor(eased * target);
@@ -927,6 +918,7 @@ export function FinlyHubLanding() {
     let rows = Math.ceil(window.innerHeight / GRID);
 
     function spawnPacket() {
+      if (!layer) return;
       const horizontal = Math.random() > 0.5;
       const p = document.createElement("div");
       p.className = "fh-packet " + (horizontal ? "h" : "v");
@@ -945,7 +937,7 @@ export function FinlyHubLanding() {
       setTimeout(() => p.remove(), duration * 1000 + 200);
     }
 
-    const timers = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < 5; i++) timers.push(setTimeout(spawnPacket, i * 500));
     const interval = setInterval(spawnPacket, 900);
     return () => {
@@ -963,8 +955,9 @@ export function FinlyHubLanding() {
       (entries) => {
         entries.forEach((entry) => {
           const v = entry.target;
-          if (entry.isIntersecting) v.play().catch(() => {});
-          else v.pause();
+          const video = v as HTMLVideoElement;
+          if (entry.isIntersecting) video.play().catch(() => {});
+          else video.pause();
         });
       },
       { threshold: 0.25 }
@@ -976,7 +969,7 @@ export function FinlyHubLanding() {
   /* ---------- Close login overlay on Escape ---------- */
   useEffect(() => {
     if (!authView) return;
-    const onKey = (e) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setAuthView(null);
     };
     window.addEventListener("keydown", onKey);
@@ -1101,8 +1094,8 @@ export function FinlyHubLanding() {
 
         <div className="fh-value-grid">
           <ValueCard
-            index="01"
-            ax={37} ay={99} az={235}
+            index={1}
+            ax="37" ay="99" az="235"
             delay="0s"
             registerReveal={registerReveal}
             title="Bank-level Security"
@@ -1115,8 +1108,8 @@ export function FinlyHubLanding() {
             }
           />
           <ValueCard
-            index="02"
-            ax={124} ay={58} az={237}
+            index={2}
+            ax="124" ay="58" az="237"
             delay="0.12s"
             registerReveal={registerReveal}
             title="Real-time Analytics"
@@ -1128,8 +1121,8 @@ export function FinlyHubLanding() {
             }
           />
           <ValueCard
-            index="03"
-            ax={22} ay={163} az={74}
+            index={3}
+            ax="22" ay="163" az="74"
             delay="0.24s"
             registerReveal={registerReveal}
             title="Automated Tax Reports"
@@ -1158,7 +1151,7 @@ export function FinlyHubLanding() {
           <h2>
             Ready to <span className="fh-accent-text">get started?</span>
           </h2>
-          <p>Pick the experience that matches how you work.</p>
+          <p>Create your account in seconds.</p>
         </div>
 
         <div className="fh-cards-wrap">
@@ -1187,105 +1180,27 @@ export function FinlyHubLanding() {
               <span className="fh-widget-badge">Live</span>
             </div>
             <div className="fh-bars">
-              <div className="fh-bar" style={{ "--h": "35%" }} />
-              <div className="fh-bar" style={{ "--h": "52%" }} />
-              <div className="fh-bar" style={{ "--h": "44%" }} />
-              <div className="fh-bar" style={{ "--h": "70%" }} />
-              <div className="fh-bar" style={{ "--h": "60%" }} />
-              <div className="fh-bar" style={{ "--h": "88%" }} />
+              <div className="fh-bar" style={{ "--h": "35%" } as React.CSSProperties} />
+              <div className="fh-bar" style={{ "--h": "52%" } as React.CSSProperties} />
+              <div className="fh-bar" style={{ "--h": "44%" } as React.CSSProperties} />
+              <div className="fh-bar" style={{ "--h": "70%" } as React.CSSProperties} />
+              <div className="fh-bar" style={{ "--h": "60%" } as React.CSSProperties} />
+              <div className="fh-bar" style={{ "--h": "88%" } as React.CSSProperties} />
             </div>
             <div className="fh-chart-caption"><span>Last 6 months</span><span className="fh-up">+24.6%</span></div>
           </div>
 
-          <div className="fh-cards">
-            <TiltCard
-              colorVar={{ "--ax": 37, "--ay": 99, "--az": 235 }}
-              ariaLabel="I run my own business"
-              registerReveal={registerReveal}
+          <div className="fh-cards" style={{ justifyContent: 'center' }}>
+            <button
+              type="button"
+              className="fh-single-cta fh-reveal-on-scroll"
+              ref={registerReveal}
               onClick={() => openSignupFor()}
             >
-              <svg className="fh-chart-vector" viewBox="0 0 340 300" preserveAspectRatio="none">
-                <line x1="0" y1="60" x2="340" y2="60" stroke="#0F172A" strokeWidth="1" />
-                <line x1="0" y1="120" x2="340" y2="120" stroke="#0F172A" strokeWidth="1" />
-                <line x1="0" y1="180" x2="340" y2="180" stroke="#0F172A" strokeWidth="1" />
-                <line x1="0" y1="240" x2="340" y2="240" stroke="#0F172A" strokeWidth="1" />
-              </svg>
-              <div className="fh-icon-wrap">
-                <svg viewBox="0 0 24 24">
-                  <path d="M3 9.5 12 4l9 5.5" />
-                  <path d="M4.5 10.5V20a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-9.5" />
-                  <path d="M9.5 21v-6a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6" />
-                  <path d="M8 13.2h.01M16 13.2h.01" />
-                </svg>
-              </div>
-              <h2>I run my own business</h2>
-              <p className="fh-desc">Simple tools to track your money, bills, and paperwork</p>
-              <div className="fh-tags">Easy-to-understand language &nbsp;•&nbsp; No accounting knowledge needed</div>
-
-              <div className="fh-mini-chart">
-                <svg viewBox="0 0 276 64" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="fh-areaFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563EB" stopOpacity="0.22" />
-                      <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path className="fh-area" d="M0,50 L30,42 L64,46 L98,26 L140,30 L180,14 L220,20 L276,6 L276,64 L0,64 Z" />
-                  <polyline className="fh-line" points="0,50 30,42 64,46 98,26 140,30 180,14 220,20 276,6" />
-                  <circle className="fh-dot-end" cx="276" cy="6" r="4" fill="#2563EB" />
-                </svg>
-              </div>
-
-              <div className="fh-cta-row">
-                Get started
-                <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              </div>
-            </TiltCard>
-
-            <TiltCard
-              colorVar={{ transitionDelay: "0.15s", "--ax": 124, "--ay": 58, "--az": 237 }}
-              ariaLabel="I'm a freelance accountant"
-              registerReveal={registerReveal}
-              onClick={() => openSignupFor()}
-            >
-              <svg className="fh-chart-vector" viewBox="0 0 340 300" preserveAspectRatio="none">
-                <line x1="0" y1="60" x2="340" y2="60" stroke="#0F172A" strokeWidth="1" />
-                <line x1="0" y1="120" x2="340" y2="120" stroke="#0F172A" strokeWidth="1" />
-                <line x1="0" y1="180" x2="340" y2="180" stroke="#0F172A" strokeWidth="1" />
-                <line x1="0" y1="240" x2="340" y2="240" stroke="#0F172A" strokeWidth="1" />
-              </svg>
-              <div className="fh-icon-wrap">
-                <svg viewBox="0 0 24 24">
-                  <rect x="3.5" y="7.5" width="17" height="12" rx="1.6" />
-                  <path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5" />
-                  <path d="M3.5 12.8h17" />
-                  <path d="M10.6 12.8v2.2h2.8v-2.2" />
-                </svg>
-              </div>
-              <h2>I'm a freelance accountant</h2>
-              <p className="fh-desc">Professional tools with proper accounting terminology</p>
-              <div className="fh-tags">Full accounting vocabulary &nbsp;•&nbsp; Client-ready reports</div>
-
-              <div className="fh-mini-ledger">
-                <div className="fh-ledger-row">
-                  <span className="fh-label">Client revenue (YTD)</span>
-                  <span className="fh-value fh-positive" data-count-to="128400" data-prefix="$">$0</span>
-                </div>
-                <div className="fh-ledger-row">
-                  <span className="fh-label">Active clients</span>
-                  <span className="fh-value" data-count-to="34">0</span>
-                </div>
-                <div className="fh-ledger-row">
-                  <span className="fh-label">Reports generated</span>
-                  <span className="fh-value fh-total" data-count-to="612">0</span>
-                </div>
-              </div>
-
-              <div className="fh-cta-row">
-                Get started
-                <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-              </div>
-            </TiltCard>
+              <svg viewBox="0 0 24 24" className="fh-single-cta-icon"><path d="M12 5v14M5 12h14" /></svg>
+              <span className="fh-single-cta-label">Create your free account</span>
+              <span className="fh-single-cta-sub">No credit card required • Takes less than a minute</span>
+            </button>
           </div>
         </div>
 

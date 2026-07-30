@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from '@/hooks/useAuth'
 import { ThemeProvider } from '@/hooks/useTheme'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { FinlyHubLanding } from '@/features/landing/FinlyHubLanding'
 import { NewDashboardLayout } from '@/components/layout/NewDashboardLayout'
 import { FinlyHubOverview } from '@/features/dashboard/FinlyHubOverview'
@@ -29,23 +30,24 @@ export default function App() {
       <BrowserRouter>
         <ThemeProvider>
           <AuthProvider>
-            <Routes>
+            <ErrorBoundary>
+              <Routes>
               <Route path="/" element={<FinlyHubLanding />} />
               <Route path="/login" element={<Navigate to="/" replace />} />
               <Route path="/register" element={<Navigate to="/" replace />} />
-              <Route path="/dashboard" element={<Navigate to="/overview" replace />} />
               <Route element={<NewDashboardLayout />}>
-                <Route path="/overview" element={<FinlyHubOverview />} />
-                <Route path="/bills" element={<FinlyHubBills />} />
-                <Route path="/assistant" element={<FinlyHubAssistant />} />
-                <Route path="/spending" element={<FinlyHubSpending />} />
+                <Route path="/dashboard" element={<FinlyHubOverview />} />
+                <Route path="/invoices" element={<FinlyHubBills />} />
+                <Route path="/copilot" element={<FinlyHubAssistant />} />
+                <Route path="/transactions" element={<FinlyHubSpending />} />
                 <Route path="/reports" element={<FinlyHubReports />} />
-                <Route path="/match-records" element={<FinlyHubMatchRecords />} />
+                <Route path="/reconciliation" element={<FinlyHubMatchRecords />} />
                 <Route path="/documents" element={<FinlyHubDocuments />} />
                 <Route path="/settings" element={<FinlyHubSettings />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </ErrorBoundary>
             <Toaster
               position="top-right"
               toastOptions={{

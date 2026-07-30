@@ -2,6 +2,8 @@ package com.finlyhub.transaction.repository;
 
 import com.finlyhub.transaction.entity.Transaction;
 import com.finlyhub.transaction.entity.Transaction.CategorizationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,6 +20,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByImportBatchId(String importBatchId);
 
     List<Transaction> findByUserIdOrderByTransactionDateDesc(Long userId);
+
+    Page<Transaction> findByUserIdOrderByTransactionDateDesc(Long userId, Pageable pageable);
 
     List<Transaction> findByUserIdAndTransactionDateBetween(Long userId, LocalDate start, LocalDate end);
 

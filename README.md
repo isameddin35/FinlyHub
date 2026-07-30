@@ -14,11 +14,11 @@ Modern, enterprise-grade SaaS platform that helps accountants automate repetitiv
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query, Recharts |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query |
 | Backend | Java 21, Spring Boot 3.4, Spring Security, JWT, Spring Data JPA |
-| Database | PostgreSQL 16 + pgvector (768-dim, ivfflat index) |
-| AI Chat | Groq (groq-sdk, llama-3.1-8b-instant) |
-| AI Embeddings | Ollama (nomic-embed-text, 768-dim) |
+| Database | PostgreSQL 16 + pgvector (384-dim, ivfflat index) |
+| AI Chat | Groq (llama-3.1-8b-instant) |
+| AI Embeddings | ONNX Runtime + DJL Tokenizers (bge-small-en-v1.5, 384-dim, in-JVM) |
 | OCR | Tesseract via Tess4J 5.12 |
 | Infrastructure | Docker, Docker Compose |
 
@@ -65,7 +65,7 @@ npm run dev
 
 ### Demo Mode
 
-The default configuration uses `AI_PROVIDER=openai` (Groq for chat, Ollama for embeddings). On first launch, Liquibase seeds demo data (users, invoices, transactions).
+On first launch, Liquibase seeds demo data (users, invoices, transactions). Embeddings run in-JVM via ONNX Runtime (bge-small-en-v1.5) — no external service required.
 
 **Demo accounts** (password: `password`):
 
@@ -75,18 +75,15 @@ The default configuration uses `AI_PROVIDER=openai` (Groq for chat, Ollama for e
 | accountant@finlyhub.com | ACCOUNTANT |
 | viewer@finlyhub.com | VIEWER |
 
-### Production Mode (with Groq + Ollama)
+### Production Mode (with Groq)
 
 ```bash
 # Set your Groq API key
 export OPENAI_API_KEY=gsk-your-groq-api-key
 export OPENAI_BASE_URL=https://api.groq.com/openai/v1
 export OPENAI_MODEL=llama-3.1-8b-instant
-export OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
-export OPENAI_EMBEDDING_API_KEY=ollama
 export AI_PROVIDER=openai
 
-# Ensure Ollama is running with nomic-embed-text
 docker compose up --build
 ```
 
@@ -98,13 +95,10 @@ See `.env.example` for all configurable variables. Key ones:
 |----------|---------|-------------|
 | `POSTGRES_DB` | finlyhub | Database name |
 | `JWT_SECRET` | (required) | Base64-encoded 256+ bit secret |
-| `AI_PROVIDER` | mock | `mock` (no key) or `openai` (Groq chat + Ollama embeddings) |
+| `AI_PROVIDER` | mock | `mock` (no key) or `openai` (Groq chat) |
 | `OPENAI_API_KEY` | - | Groq API key (if provider is `openai`) |
 | `OPENAI_BASE_URL` | https://api.groq.com/openai/v1 | Groq-compatible API base URL |
 | `OPENAI_MODEL` | llama-3.1-8b-instant | Chat model |
-| `OPENAI_EMBEDDING_BASE_URL` | http://ollama:11434/v1 | Ollama embeddings endpoint |
-| `OPENAI_EMBEDDING_API_KEY` | sk-ollama | Dummy key for Ollama |
-| `OPENAI_EMBEDDING_MODEL` | nomic-embed-text | Embedding model (768-dim output) |
 
 ## Project Structure
 

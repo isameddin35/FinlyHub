@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { documentApi } from '@/api/documents'
 import apiClient from '@/api/client'
+import { mockApiResponse } from './test-utils'
 
 vi.mock('@/api/client', () => ({
   default: {
@@ -15,7 +16,7 @@ describe('documentApi', () => {
 
   it('upload posts file to /documents/upload', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true, data: { id: 1 } } } as any)
+    mockPost.mockResolvedValue(mockApiResponse({ id: 1 }))
 
     const file = new File(['content'], 'test.pdf', { type: 'application/pdf' })
     await documentApi.upload(file)
@@ -29,7 +30,7 @@ describe('documentApi', () => {
 
   it('list gets /documents', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true, data: [] } } as any)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
     await documentApi.list()
 
@@ -38,7 +39,7 @@ describe('documentApi', () => {
 
   it('delete calls DELETE /documents/:id', async () => {
     const mockDelete = vi.mocked(apiClient.delete)
-    mockDelete.mockResolvedValue({ data: { success: true } } as any)
+    mockDelete.mockResolvedValue(mockApiResponse(null))
 
     await documentApi.delete(1)
 
@@ -47,7 +48,7 @@ describe('documentApi', () => {
 
   it('reprocess posts to /documents/:id/reprocess', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     await documentApi.reprocess(1)
 

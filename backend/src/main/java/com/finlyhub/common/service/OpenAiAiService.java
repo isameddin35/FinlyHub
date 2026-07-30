@@ -1,5 +1,6 @@
 package com.finlyhub.common.service;
 
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.model.CategorizationResult;
 import com.finlyhub.common.model.ChatRequest;
 import com.finlyhub.common.model.ChatResponse;
@@ -107,7 +108,7 @@ public class OpenAiAiService implements AiService {
             return parseExtractionResponse(response);
         } catch (Exception e) {
             log.error("AI extraction failed", e);
-            throw new RuntimeException("AI extraction failed: " + e.getMessage());
+            throw new BusinessException("AI extraction failed: " + e.getMessage());
         }
     }
 
@@ -133,7 +134,7 @@ public class OpenAiAiService implements AiService {
                     .build();
         } catch (Exception e) {
             log.error("AI chat failed", e);
-            throw new RuntimeException("AI chat failed: " + e.getMessage());
+            throw new BusinessException("AI chat failed: " + e.getMessage());
         }
     }
 
@@ -162,7 +163,7 @@ public class OpenAiAiService implements AiService {
                     });
         } catch (Exception e) {
             log.error("AI chat stream failed", e);
-            throw new RuntimeException("AI chat stream failed: " + e.getMessage());
+            throw new BusinessException("AI chat stream failed: " + e.getMessage());
         }
 
         onComplete.run();

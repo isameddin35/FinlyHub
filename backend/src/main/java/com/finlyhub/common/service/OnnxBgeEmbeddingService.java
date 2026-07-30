@@ -2,6 +2,7 @@ package com.finlyhub.common.service;
 
 import ai.djl.huggingface.tokenizers.Encoding;
 import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
+import com.finlyhub.common.exception.BusinessException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +60,7 @@ public class OnnxBgeEmbeddingService {
             log.info("ONNX BGE embedding model loaded: dim={}, max_length={}", EMBEDDING_DIM, MAX_LENGTH);
         } catch (Exception e) {
             log.error("Failed to load ONNX embedding model", e);
-            throw new RuntimeException("ONNX model load failed: " + e.getMessage(), e);
+            throw new BusinessException("ONNX model load failed: " + e.getMessage());
         }
     }
 

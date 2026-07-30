@@ -60,6 +60,12 @@ public class Document {
     @Column(name = "error_message")
     private String errorMessage;
 
+    @Column(name = "total_chunks", nullable = false)
+    private int totalChunks;
+
+    @Column(name = "indexed_chunks", nullable = false)
+    private int indexedChunks;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

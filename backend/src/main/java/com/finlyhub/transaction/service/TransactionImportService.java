@@ -1,5 +1,8 @@
 package com.finlyhub.transaction.service;
 
+import com.finlyhub.common.exception.BusinessException;
+import com.finlyhub.common.exception.ResourceNotFoundException;
+import com.finlyhub.common.util.FileParsingUtils;
 import com.finlyhub.transaction.dto.TransactionImportResponse;
 import com.finlyhub.transaction.dto.TransactionUploadResponse;
 import com.finlyhub.transaction.entity.Transaction;
@@ -16,10 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -34,7 +35,7 @@ public class TransactionImportService {
 
     public TransactionUploadResponse importCsv(MultipartFile file, Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId.toString()));
 
         String batchId = UUID.randomUUID().toString();
         List<Transaction> transactions = new ArrayList<>();
@@ -79,11 +80,11 @@ public class TransactionImportService {
                     Transaction transaction = new Transaction();
                     transaction.setUser(user);
 
-                    LocalDate date = parseDate(fields[0].trim(), formatters);
+                    LocalDate date = FileParsingUtils.parseDate(fields[0].trim(), formatters);
                     transaction.setTransactionDate(date != null ? date : LocalDate.now());
 
                     transaction.setDescription(fields[1].trim());
-                    transaction.setAmount(new BigDecimal(fields[2].trim()));
+                    transaction.setAmount(FileParsingUtils.parseAmount(fields[2].trim()));
 
                     int idx = 3;
                     if (hasReference && fields.length > idx) {
@@ -101,7 +102,7 @@ public class TransactionImportService {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to parse CSV file", e);
+            throw new BusinessException("Failed to parse CSV file");
         }
 
         transactionRepository.saveAll(transactions);
@@ -116,7 +117,7 @@ public class TransactionImportService {
 
     public TransactionUploadResponse importXlsx(MultipartFile file, Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId.toString()));
 
         String batchId = UUID.randomUUID().toString();
         List<Transaction> transactions = new ArrayList<>();
@@ -136,7 +137,7 @@ public class TransactionImportService {
             boolean hasVendor = false;
 
             for (int i = 0; i < headerRow.getPhysicalNumberOfCells(); i++) {
-                String col = getCellValueFormatted(headerRow.getCell(i)).trim().toLowerCase();
+                String col = FileParsingUtils.getCellValue(headerRow.getCell(i)).trim().toLowerCase();
                 if (col.equals("reference")) hasReference = true;
                 if (col.equals("vendor")) hasVendor = true;
             }
@@ -154,27 +155,27 @@ public class TransactionImportService {
                 if (row == null) continue;
 
                 try {
-                    String dateStr = getCellValueFormatted(row.getCell(0));
-                    String desc = getCellValueFormatted(row.getCell(1));
-                    String amountStr = getCellValueFormatted(row.getCell(2));
+                    String dateStr = FileParsingUtils.getCellValue(row.getCell(0));
+                    String desc = FileParsingUtils.getCellValue(row.getCell(1));
+                    String amountStr = FileParsingUtils.getCellValue(row.getCell(2));
 
                     if (desc.isEmpty() || amountStr.isEmpty()) continue;
 
                     Transaction transaction = new Transaction();
                     transaction.setUser(user);
 
-                    LocalDate date = parseDate(dateStr, formatters);
+                    LocalDate date = FileParsingUtils.parseDate(dateStr, formatters);
                     transaction.setTransactionDate(date != null ? date : LocalDate.now());
 
                     transaction.setDescription(desc);
-                    transaction.setAmount(new BigDecimal(amountStr.replaceAll("[^\\d.\\-]", "")));
+                    transaction.setAmount(FileParsingUtils.parseAmount(amountStr));
 
                     int idx = 3;
                     if (hasReference && row.getPhysicalNumberOfCells() > idx) {
-                        transaction.setReference(getCellValueFormatted(row.getCell(idx++)));
+                        transaction.setReference(FileParsingUtils.getCellValue(row.getCell(idx++)));
                     }
                     if (hasVendor && row.getPhysicalNumberOfCells() > idx) {
-                        transaction.setVendor(getCellValueFormatted(row.getCell(idx)));
+                        transaction.setVendor(FileParsingUtils.getCellValue(row.getCell(idx)));
                     }
 
                     transaction.setSource(TransactionSource.XLSX);
@@ -185,7 +186,7 @@ public class TransactionImportService {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to parse XLSX file", e);
+            throw new BusinessException("Failed to parse XLSX file");
         }
 
         transactionRepository.saveAll(transactions);
@@ -196,36 +197,6 @@ public class TransactionImportService {
                 .totalCount(transactions.size())
                 .message("Imported " + transactions.size() + " transactions")
                 .build();
-    }
-
-    private String getCellValueFormatted(Cell cell) {
-        if (cell == null) return "";
-        return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue();
-            case NUMERIC -> {
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    yield cell.getLocalDateTimeCellValue().toLocalDate().toString();
-                }
-                double val = cell.getNumericCellValue();
-                if (val == Math.floor(val) && !Double.isInfinite(val)) {
-                    yield String.valueOf((long) val);
-                }
-                yield String.valueOf(val);
-            }
-            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-            case FORMULA -> {
-                try {
-                    yield String.valueOf(cell.getNumericCellValue());
-                } catch (Exception e) {
-                    try {
-                        yield cell.getStringCellValue();
-                    } catch (Exception e2) {
-                        yield "";
-                    }
-                }
-            }
-            default -> "";
-        };
     }
 
     private String[] parseCsvLine(String line) {
@@ -254,14 +225,4 @@ public class TransactionImportService {
         return fields.toArray(new String[0]);
     }
 
-    private LocalDate parseDate(String dateStr, DateTimeFormatter[] formatters) {
-        if (dateStr == null || dateStr.isEmpty()) return null;
-        for (DateTimeFormatter fmt : formatters) {
-            try {
-                return LocalDate.parse(dateStr, fmt);
-            } catch (DateTimeParseException ignored) {
-            }
-        }
-        return null;
-    }
 }

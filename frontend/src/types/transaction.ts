@@ -7,7 +7,9 @@ export interface TransactionResponse {
   reference: string | null
   vendor: string | null
   source: string
+  categoryId: number | null
   categoryName: string | null
+  suggestedCategoryId: number | null
   suggestedCategoryName: string | null
   confidenceScore: number | null
   categorizationStatus: string

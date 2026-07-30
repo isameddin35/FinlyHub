@@ -1,10 +1,7 @@
-// @ts-nocheck
 import { useState } from 'react'
-
-/**
- * Finly Hub — Match Records (Reconciliation) page
- * Renders inside <DashboardLayout page="match">...</DashboardLayout>.
- */
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
+import { reconciliationApi } from '@/api/reconciliation'
 
 const CSS = `
 .fhm-root{ font-family:'Inter', sans-serif; color:#1E293B; }
@@ -69,28 +66,71 @@ const CSS = `
 .fhm-status-pill{ font-size:10px; font-weight:700; letter-spacing:0.03em; text-transform:uppercase; padding:3px 9px; border-radius:999px; background:#EFF6FF; color:#2563EB; }
 .fhm-recon-range{ font-size:12.5px; color:#64748B; margin-bottom:3px; }
 .fhm-recon-created{ font-size:11.5px; color:#94A3B8; }
+.fhm-spinner{ display:flex; justify-content:center; padding:30px 0; }
+.fhm-spinner:after{ content:''; width:24px; height:24px; border:3px solid #E2E8F0; border-top-color:#2563EB; border-radius:50%; animation:fhm-spin 0.6s linear infinite; }
+@keyframes fhm-spin{ to{ transform:rotate(360deg); } }
+
+.dark .fhm-panel{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fhm-panel h3{ color:#F1F5F9; }
+.dark .fhm-recon-card{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fhm-recon-title{ color:#F1F5F9; }
+.dark .fhm-recon-range{ color:#94A3B8; }
+.dark .fhm-recon-created{ color:#64748B; }
+.dark .fhm-dropzone{ border-color:#334155; background:rgba(15,23,42,0.6); }
+.dark .fhm-dropzone:hover{ border-color:#3B82F6; background:rgba(37,99,235,0.08); }
+.dark .fhm-dropzone .fhm-drop-title{ color:#E2E8F0; }
+.dark .fhm-dropzone .fhm-drop-sub{ color:#94A3B8; }
+.dark .fhm-field label{ color:#E2E8F0; }
+.dark .fhm-field input{ background:#1E293B; border-color:#334155; color:#F1F5F9; }
+.dark .fhm-section-title{ color:#F1F5F9; }
+.dark .fhm-header h2{ color:#F1F5F9; }
 `;
 
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  IN_PROGRESS: { bg: '#EFF6FF', color: '#2563EB' },
+  APPROVED: { bg: '#ECFDF5', color: '#16A34A' },
+  REVIEW: { bg: '#FFF7ED', color: '#C2610A' },
+  FAILED: { bg: '#FEF2F2', color: '#DC2626' },
+};
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export function FinlyHubMatchRecords() {
-  const [bankFile, setBankFile] = useState(null);
-  const [acctFile, setAcctFile] = useState(null);
+  const queryClient = useQueryClient()
+  const [bankFile, setBankFile] = useState<File | null>(null);
+  const [acctFile, setAcctFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [reconciliations, setReconciliations] = useState([
-    { title: "January 2026 Bank Reconciliation", range: "Jan 1, 2026 - Jan 31, 2026", created: "Jul 8, 2026", status: "IN_PROGRESS" },
-  ]);
 
   const canStart = bankFile && acctFile && title && periodStart && periodEnd;
 
+  const { data: reconciliations, isLoading } = useQuery({
+    queryKey: ['reconciliations'],
+    queryFn: async () => {
+      const res = await reconciliationApi.list()
+      return res.data.data
+    },
+  })
+
+  const matchMutation = useMutation({
+    mutationFn: () => reconciliationApi.match(bankFile!, acctFile!, title, periodStart, periodEnd),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reconciliations'] })
+      toast.success('Reconciliation started')
+      setTitle(""); setPeriodStart(""); setPeriodEnd(""); setBankFile(null); setAcctFile(null);
+    },
+    onError: () => toast.error('Failed to start reconciliation'),
+  })
+
   const startMatching = () => {
-    if (!canStart) return;
-    setReconciliations((r) => [
-      { title, range: `${periodStart} - ${periodEnd}`, created: new Date().toLocaleDateString(), status: "IN_PROGRESS" },
-      ...r,
-    ]);
-    setTitle(""); setPeriodStart(""); setPeriodEnd(""); setBankFile(null); setAcctFile(null);
+    if (!canStart) return
+    matchMutation.mutate()
   };
+
+  const statusStyle = (status: string) => STATUS_COLORS[status] || { bg: '#F1F5F9', color: '#64748B' };
 
   return (
     <div className="fhm-root">
@@ -98,7 +138,7 @@ export function FinlyHubMatchRecords() {
       <div className="fhm-header"><h2>Reconciliation</h2></div>
 
       <div className="fhm-drop-row">
-        <label className={"fhm-dropzone" + (bankFile ? " fhm-filled" : "")}>
+        <label className={"fhm-dropzone" + (bankFile ? " fhm-filled" : "")} aria-label="Upload bank statement CSV">
           <input type="file" style={{ display: "none" }} onChange={(e) => setBankFile(e.target.files?.[0] || null)} />
           <div className="fhm-drop-icon">
             <svg viewBox="0 0 24 24">{bankFile ? <path d="m5 13 4 4L19 7" /> : <><rect x="3.5" y="6.5" width="17" height="11" rx="2.2" /><circle cx="12" cy="12" r="2.4" /></>}</svg>
@@ -107,7 +147,7 @@ export function FinlyHubMatchRecords() {
           <div className="fhm-drop-sub">{bankFile ? bankFile.name : "Drop file or click to browse"}</div>
         </label>
 
-        <label className={"fhm-dropzone" + (acctFile ? " fhm-filled" : "")}>
+        <label className={"fhm-dropzone" + (acctFile ? " fhm-filled" : "")} aria-label="Upload accounting records CSV">
           <input type="file" style={{ display: "none" }} onChange={(e) => setAcctFile(e.target.files?.[0] || null)} />
           <div className="fhm-drop-icon">
             <svg viewBox="0 0 24 24">{acctFile ? <path d="m5 13 4 4L19 7" /> : <><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4" /></>}</svg>
@@ -133,27 +173,36 @@ export function FinlyHubMatchRecords() {
             <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
           </div>
         </div>
-        <button type="button" className="fhm-start-btn" disabled={!canStart} onClick={startMatching}>
+        <button type="button" className="fhm-start-btn" disabled={!canStart || matchMutation.isPending} onClick={startMatching}>
           <svg viewBox="0 0 24 24"><path d="M12 15.5V4.5M8 8.5l4-4 4 4" /><path d="M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15" /></svg>
-          Start Matching
+          {matchMutation.isPending ? "Starting..." : "Start Matching"}
         </button>
       </div>
 
       <div className="fhm-divider" />
 
       <div className="fhm-section-title">Previous Reconciliations</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-        {reconciliations.map((r, i) => (
-          <div className="fhm-recon-card" key={i}>
-            <div className="fhm-recon-top">
-              <span className="fhm-recon-title">{r.title}</span>
-              <span className="fhm-status-pill">{r.status}</span>
-            </div>
-            <div className="fhm-recon-range">{r.range}</div>
-            <div className="fhm-recon-created">{r.created}</div>
-          </div>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="fhm-spinner" />
+      ) : !reconciliations || reconciliations.length === 0 ? (
+        <div style={{ fontSize: 13, color: "#94A3B8", padding: "10px 0" }}>No reconciliations yet.</div>
+      ) : (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+          {reconciliations.map((r) => {
+            const ss = statusStyle(r.status)
+            return (
+              <div className="fhm-recon-card" key={r.id}>
+                <div className="fhm-recon-top">
+                  <span className="fhm-recon-title">{r.title}</span>
+                  <span className="fhm-status-pill" style={{ background: ss.bg, color: ss.color }}>{r.status}</span>
+                </div>
+                <div className="fhm-recon-range">{r.periodStart} — {r.periodEnd}</div>
+                <div className="fhm-recon-created">{formatDate(r.createdAt)}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   );
 }

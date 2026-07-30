@@ -71,11 +71,11 @@ class ChatbotControllerTest {
         conversation.setId(2L);
         conversation.setActive(true);
 
-        when(chatbotService.createConversation(any(), isNull())).thenReturn(conversation);
+        when(chatbotService.createConversation(any(), any())).thenReturn(conversation);
 
         mockMvc.perform(post("/api/chat/conversations")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                        .content("{\"title\":\"New Chat\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true));
     }

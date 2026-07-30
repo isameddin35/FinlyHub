@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { transactionApi } from '@/api/transactions'
 import apiClient from '@/api/client'
+import { mockApiResponse } from './test-utils'
 
 vi.mock('@/api/client', () => ({
   default: {
@@ -15,7 +16,7 @@ describe('transactionApi', () => {
 
   it('import posts file to /transactions/import', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     const file = new File(['c'], 'transactions.csv')
     await transactionApi.import(file)
@@ -29,7 +30,7 @@ describe('transactionApi', () => {
 
   it('list gets /transactions', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true, data: [] } } as any)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
     await transactionApi.list()
 
@@ -38,7 +39,7 @@ describe('transactionApi', () => {
 
   it('categorize posts to /transactions/:id/categorize', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     await transactionApi.categorize(1)
 
@@ -47,7 +48,7 @@ describe('transactionApi', () => {
 
   it('approve puts to /transactions/:id/approve', async () => {
     const mockPut = vi.mocked(apiClient.put)
-    mockPut.mockResolvedValue({ data: { success: true } } as any)
+    mockPut.mockResolvedValue(mockApiResponse(null))
 
     await transactionApi.approve(1, { categoryId: 5 })
 
@@ -56,7 +57,7 @@ describe('transactionApi', () => {
 
   it('getCategories gets /transactions/categories', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true, data: [] } } as any)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
     await transactionApi.getCategories()
 

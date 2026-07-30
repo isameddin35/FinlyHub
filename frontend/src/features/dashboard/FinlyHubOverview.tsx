@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardApi } from '@/api/dashboard'
-import type { DashboardMetricsResponse } from '@/types/dashboard'
 
 const CSS = `
 .fho-root{ font-family:'Inter', sans-serif; color:#1E293B; }
@@ -97,6 +96,25 @@ const CSS = `
 .fho-status-processing{ background:#FFF7ED; color:#C2610A; }
 .fho-activity-sub{ font-size:12px; color:#64748B; }
 .fho-activity-time{ font-size:11.5px; color:#94A3B8; white-space:nowrap; flex-shrink:0; }
+.dark .fho-stat-card{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fho-stat-card:hover{ border-color:rgba(59,130,246,0.3); }
+.dark .fho-stat-label{ color:#94A3B8; }
+.dark .fho-stat-value{ color:#F1F5F9; }
+.dark .fho-header h2{ color:#F1F5F9; }
+.dark .fho-header p{ color:#94A3B8; }
+.dark .fho-panel{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fho-panel h3{ color:#F1F5F9; }
+.dark .fho-legend-item{ color:#94A3B8; }
+.dark .fho-chart-tooltip{ background:rgba(15,23,42,0.97); border-color:#334155; }
+.dark .fho-tooltip-month{ color:#F1F5F9; }
+.dark .fho-tooltip-row .fho-tval{ color:#F1F5F9; }
+.dark .fho-activity-row{ border-color:#1E293B; }
+.dark .fho-activity-title{ color:#E2E8F0; }
+.dark .fho-activity-sub{ color:#94A3B8; }
+.dark .fho-activity-icon.fho-icon-green{ background:rgba(22,163,74,0.15); }
+.dark .fho-status-progress{ background:rgba(37,99,235,0.15); color:#60A5FA; }
+.dark .fho-status-approved{ background:rgba(22,163,74,0.15); color:#4ADE80; }
+.dark .fho-status-processing{ background:rgba(194,97,10,0.15); color:#FB923C; }
 @media (max-width:1180px){
   .fho-stats{ grid-template-columns:repeat(3, 1fr); }
   .fho-grid{ grid-template-columns:1fr; }
@@ -173,7 +191,7 @@ function LoadingSkeleton() {
   return (
     <div className="fho-root">
       <div className="fho-header">
-        <h2>Overview</h2>
+        <h2>Dashboard</h2>
         <p>Loading your data...</p>
       </div>
       <div className="fho-stats">
@@ -195,7 +213,7 @@ function ErrorState() {
   return (
     <div className="fho-root">
       <div className="fho-header">
-        <h2>Overview</h2>
+        <h2>Dashboard</h2>
         <p>Could not load dashboard data</p>
       </div>
     </div>
@@ -229,14 +247,14 @@ export function FinlyHubOverview() {
       <style>{CSS}</style>
 
       <div className="fho-header">
-        <h2>Overview</h2>
+        <h2>Dashboard</h2>
         <p>Your money at a glance</p>
       </div>
 
       <div className="fho-stats">
         <div className="fho-stat-card">
           <div className="fho-stat-head">
-            <span className="fho-stat-label">Bills Ready</span>
+            <span className="fho-stat-label">Invoices Ready</span>
             <div className="fho-stat-icon"><svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4" /></svg></div>
           </div>
           <div className="fho-stat-value">{data.invoicesProcessed.toLocaleString()}</div>
@@ -258,7 +276,7 @@ export function FinlyHubOverview() {
         </div>
         <div className="fho-stat-card">
           <div className="fho-stat-head">
-            <span className="fho-stat-label">Spending Sorted</span>
+            <span className="fho-stat-label">Transactions Categorized</span>
             <div className="fho-stat-icon"><svg viewBox="0 0 24 24"><path d="M4 8h13M17 8l-3.5-3.5M17 8l-3.5 3.5" /><path d="M20 16H7M7 16l3.5-3.5M7 16l3.5 3.5" /></svg></div>
           </div>
           <div className="fho-stat-value">{data.transactionsCategorized.toLocaleString()}</div>
@@ -293,7 +311,7 @@ export function FinlyHubOverview() {
 
       <div className="fho-grid">
         <div className="fho-panel">
-          <h3>Income vs Spending</h3>
+          <h3>Income vs Expenses</h3>
           <div className="fho-chart-legend">
             <span className="fho-legend-item"><span className="fho-legend-dot" style={{ background: '#2563EB' }} />Money Coming In</span>
             <span className="fho-legend-item"><span className="fho-legend-dot" style={{ background: '#DC2626' }} />Money Going Out</span>

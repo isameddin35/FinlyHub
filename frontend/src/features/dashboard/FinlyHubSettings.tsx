@@ -64,6 +64,17 @@ const CSS = `
 
 .fhst-connected-row{ display:flex; align-items:center; gap:10px; }
 .fhst-note{ font-size:12px; color:#94A3B8; margin-top:12px; }
+.dark .fhst-header h2{ color:#F1F5F9; }
+.dark .fhst-header p{ color:#94A3B8; }
+.dark .fhst-panel{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fhst-panel h3{ color:#F1F5F9; }
+.dark .fhst-field label{ color:#E2E8F0; }
+.dark .fhst-field input{ background:#1E293B; border-color:#334155; color:#F1F5F9; }
+.dark .fhst-theme-label{ color:#E2E8F0; }
+.dark .fhst-toggle-btn{ background:#1E293B; border-color:#334155; }
+.dark .fhst-toggle-btn svg{ stroke:#94A3B8; }
+.dark .fhst-info-row{ background:rgba(15,23,42,0.6); }
+.dark .fhst-info-value{ color:#E2E8F0; }
 `;
 
 function formatDate(dateStr: string | undefined): string {

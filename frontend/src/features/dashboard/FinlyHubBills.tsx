@@ -112,6 +112,28 @@ const CSS = `
 .fhb-approve-btn:hover{ transform:translateY(-1px); }
 .fhb-approve-btn:disabled{ opacity:0.5; cursor:not-allowed; transform:none; }
 
+.dark .fhb-header h2{ color:#F1F5F9; }
+.dark .fhb-header p{ color:#94A3B8; }
+.dark .fhb-export-btn{ background:#1E293B; border-color:#334155; color:#E2E8F0; }
+.dark .fhb-dropzone{ border-color:#334155; background:rgba(15,23,42,0.6); }
+.dark .fhb-dropzone:hover{ border-color:#3B82F6; background:rgba(37,99,235,0.08); }
+.dark .fhb-dropzone .fhb-drop-title{ color:#E2E8F0; }
+.dark .fhb-section-title{ color:#F1F5F9; }
+.dark .fhb-card{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fhb-vendor{ color:#F1F5F9; }
+.dark .fhb-amount{ color:#F1F5F9; }
+.dark .fhb-modal{ background:#0F172A; }
+.dark .fhb-modal h3{ color:#F1F5F9; }
+.dark .fhb-modal-sub{ color:#94A3B8; }
+.dark .fhb-field label{ color:#94A3B8; }
+.dark .fhb-field input{ background:#1E293B; border-color:#334155; color:#F1F5F9; }
+.dark .fhb-field input:read-only{ background:#0F172A; color:#94A3B8; }
+.dark .fhb-modal-footer{ border-color:#1E293B; }
+.dark .fhb-cancel-btn{ background:#1E293B; border-color:#334155; color:#94A3B8; }
+.dark .fhb-badge-approved{ background:rgba(22,163,74,0.15); }
+.dark .fhb-badge-processing{ background:rgba(37,99,235,0.15); }
+.dark .fhb-badge-rejected{ background:rgba(220,38,38,0.15); }
+.dark .fhb-conf-track{ background:#1E293B; }
 @media (max-width:1100px){ .fhb-grid{ grid-template-columns:repeat(2, 1fr); } }
 @media (max-width:680px){
   .fhb-grid{ grid-template-columns:1fr; }
@@ -269,6 +291,15 @@ export function FinlyHubBills() {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload invoice"
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && !uploadMutation.isPending) {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
       >
         <div className="fhb-drop-icon">
           <svg viewBox="0 0 24 24"><path d="M12 15.5V4.5M8 8.5l4-4 4 4" /><path d="M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15" /></svg>

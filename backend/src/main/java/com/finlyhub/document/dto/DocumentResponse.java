@@ -23,6 +23,8 @@ public class DocumentResponse {
     private Document.DocumentType documentType;
     private Document.DocumentStatus status;
     private String errorMessage;
+    private int totalChunks;
+    private int indexedChunks;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

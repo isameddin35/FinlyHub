@@ -11,6 +11,7 @@ import com.finlyhub.reconciliation.repository.ReconciliationRepository;
 import com.finlyhub.transaction.entity.Transaction.CategorizationStatus;
 import com.finlyhub.transaction.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -32,17 +33,16 @@ public class DashboardService {
     private final DocumentRepository documentRepository;
 
     public DashboardMetricsResponse getMetrics(Long userId) {
-        long invoicesProcessed = invoiceRepository.findByUserId(userId).size();
+        long invoicesProcessed = invoiceRepository.countByUserId(userId);
         long transactionsCategorized = transactionRepository
-                .findByUserIdAndCategorizationStatus(userId, CategorizationStatus.APPROVED).size();
+                .countByUserIdAndCategorizationStatus(userId, CategorizationStatus.APPROVED);
         long reconciliationsCompleted = reconciliationRepository
-                .findByUserId(userId).stream()
-                .filter(r -> Reconciliation.ReconciliationStatus.APPROVED.equals(r.getStatus()))
-                .count();
+                .countByUserIdAndStatus(userId, Reconciliation.ReconciliationStatus.APPROVED);
         long documentsIndexed = documentRepository
-                .findByUserIdAndStatus(userId, Document.DocumentStatus.INDEXED).size();
+                .countByUserIdAndStatus(userId, Document.DocumentStatus.INDEXED);
 
-        var allTransactions = transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
+        var allTransactions = transactionRepository.findByUserIdOrderByTransactionDateDesc(
+                userId, PageRequest.of(0, 1000)).getContent();
         double totalRevenue = allTransactions.stream()
                 .filter(t -> t.getAmount().compareTo(java.math.BigDecimal.ZERO) > 0)
                 .map(t -> t.getAmount().doubleValue())
@@ -109,10 +109,9 @@ public class DashboardService {
     private List<ActivityItem> buildRecentActivity(Long userId) {
         List<ActivityItem> items = new ArrayList<>();
 
-        var recentInvoices = invoiceRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        int invoiceLimit = Math.min(recentInvoices.size(), 3);
-        for (int i = 0; i < invoiceLimit; i++) {
-            var inv = recentInvoices.get(i);
+        var recentInvoices = invoiceRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 3));
+        for (var inv : recentInvoices) {
             items.add(ActivityItem.builder()
                     .id(inv.getId())
                     .type("INVOICE")
@@ -123,10 +122,9 @@ public class DashboardService {
                     .build());
         }
 
-        var recentTransactions = transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
-        int txnLimit = Math.min(recentTransactions.size(), 3);
-        for (int i = 0; i < txnLimit; i++) {
-            var txn = recentTransactions.get(i);
+        var recentTransactions = transactionRepository
+                .findByUserIdOrderByTransactionDateDesc(userId, PageRequest.of(0, 3));
+        for (var txn : recentTransactions) {
             items.add(ActivityItem.builder()
                     .id(txn.getId())
                     .type("TRANSACTION")
@@ -136,10 +134,9 @@ public class DashboardService {
                     .build());
         }
 
-        var recentReconciliations = reconciliationRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        int recLimit = Math.min(recentReconciliations.size(), 3);
-        for (int i = 0; i < recLimit; i++) {
-            var rec = recentReconciliations.get(i);
+        var recentReconciliations = reconciliationRepository
+                .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 3));
+        for (var rec : recentReconciliations) {
             items.add(ActivityItem.builder()
                     .id(rec.getId())
                     .type("RECONCILIATION")

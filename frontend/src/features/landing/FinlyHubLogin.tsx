@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
@@ -160,6 +159,13 @@ const CSS = `
 @media (prefers-reduced-motion: reduce){
   .fhl-root *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
 }
+
+.dark .fhl-root{ --navy:#F1F5F9; --slate:#E2E8F0; --grey:#94A3B8; --border:#334155; --blue-soft:rgba(37,99,235,0.12); }
+.dark .fhl-card{ background:rgba(15,23,42,0.8); border-color:rgba(51,65,85,0.6); }
+.dark .fhl-input-wrap input{ background:rgba(30,41,59,0.8); border-color:#334155; color:#F1F5F9; }
+.dark .fhl-input-wrap input:focus{ background:rgba(30,41,59,0.95); border-color:rgba(59,130,246,0.55); }
+.dark .fhl-root .fhl-grid-texture{ background-image:linear-gradient(to right, rgba(148,163,184,0.06) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,0.06) 1px, transparent 1px); }
+.dark .fhl-demo{ border-color:rgba(37,99,235,0.2); }
 `
 
 export function FinlyHubLogin({ onCreateAccount, onDismiss }: FinlyHubLoginProps) {

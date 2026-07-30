@@ -97,14 +97,11 @@ JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRATION=86400000
 JWT_REFRESH_EXPIRATION=604800000
 
-# AI Provider (Groq for chat, Ollama for embeddings)
+# AI Provider (Groq for chat, ONNX in-JVM for embeddings)
 AI_PROVIDER=openai
 OPENAI_BASE_URL=https://api.groq.com/openai/v1
 OPENAI_API_KEY=${OPENAI_API_KEY}
 OPENAI_MODEL=llama-3.1-8b-instant
-OPENAI_EMBEDDING_MODEL=nomic-embed-text
-OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
-OPENAI_EMBEDDING_API_KEY=ollama
 
 # CORS
 APP_CORS_ALLOWED_ORIGINS=https://finlyhub.org,https://www.finlyhub.org,http://localhost:5173,http://localhost:3000
@@ -121,8 +118,7 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --b
 log "Waiting for services to become healthy..."
 sleep 10
 
-# Clean up qwen2:0.5b if it was partially pulled during a failed transition
-docker exec finlyhub-ollama ollama rm qwen2:0.5b 2>/dev/null && log "Cleaned up partial qwen2:0.5b pull" || true
+# Embeddings now run in-JVM via ONNX (bge-small-en-v1.5) — no Ollama service needed
 
 RUNNING=$(docker compose ps --services --filter "status=running" | wc -l)
 TOTAL=$(docker compose ps --services | wc -l)

@@ -1,5 +1,6 @@
 package com.finlyhub.document.service;
 
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
 import com.finlyhub.common.util.SecurityUtils;
 import com.finlyhub.document.dto.DocumentUploadResponse;
@@ -10,6 +11,7 @@ import com.finlyhub.document.repository.DocumentChunkRepository;
 import com.finlyhub.document.repository.DocumentRepository;
 import com.finlyhub.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class DocumentService {
 
@@ -79,7 +82,7 @@ public class DocumentService {
                     .build();
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file", e);
+            throw new BusinessException("Failed to store file");
         }
     }
 
@@ -110,7 +113,8 @@ public class DocumentService {
             if (document.getStoragePath() != null) {
                 Files.deleteIfExists(Paths.get(document.getStoragePath()));
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            log.error("Failed to delete file: {}", document.getStoragePath(), e);
         }
 
         documentRepository.delete(document);

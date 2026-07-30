@@ -132,7 +132,7 @@ public class MockAiService implements AiService {
 
         return CategorizationResult.builder()
                 .categoryName(category)
-                .confidenceScore(round(confidence * 100))
+                .confidenceScore(confidence)
                 .reasoning("Based on transaction description and merchant analysis")
                 .build();
     }

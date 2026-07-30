@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { reportApi } from '@/api/reports'
 import apiClient from '@/api/client'
+import { mockApiResponse, mockBlobResponse } from './test-utils'
 
 vi.mock('@/api/client', () => ({
   default: {
@@ -14,7 +15,7 @@ describe('reportApi', () => {
 
   it('generate posts to /reports/generate', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     await reportApi.generate({ type: 'PROFIT_LOSS', subtype: 'annual', periodStart: '2026-01-01', periodEnd: '2026-03-31' })
 
@@ -25,7 +26,7 @@ describe('reportApi', () => {
 
   it('list gets /reports', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true, data: [] } } as any)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
     await reportApi.list()
 
@@ -34,7 +35,7 @@ describe('reportApi', () => {
 
   it('getById gets /reports/:id', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true } } as any)
+    mockGet.mockResolvedValue(mockApiResponse(null))
 
     await reportApi.getById(1)
 
@@ -43,7 +44,7 @@ describe('reportApi', () => {
 
   it('export gets /reports/:id/export with format', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: new Blob() } as any)
+    mockGet.mockResolvedValue(mockBlobResponse(new Blob()))
 
     await reportApi.export(1, 'pdf')
 

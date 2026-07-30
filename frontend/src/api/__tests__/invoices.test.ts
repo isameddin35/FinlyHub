@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { invoiceApi } from '@/api/invoices'
 import apiClient from '@/api/client'
+import { mockApiResponse } from './test-utils'
 
 vi.mock('@/api/client', () => ({
   default: {
@@ -15,7 +16,7 @@ describe('invoiceApi', () => {
 
   it('upload posts file to /invoices/upload', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     const file = new File(['content'], 'inv.pdf', { type: 'application/pdf' })
     await invoiceApi.upload(file)
@@ -29,7 +30,7 @@ describe('invoiceApi', () => {
 
   it('list gets /invoices', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true, data: { content: [] } } } as any)
+    mockGet.mockResolvedValue(mockApiResponse({ content: [] }))
 
     await invoiceApi.list()
 
@@ -38,7 +39,7 @@ describe('invoiceApi', () => {
 
   it('getById gets /invoices/:id', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true } } as any)
+    mockGet.mockResolvedValue(mockApiResponse(null))
 
     await invoiceApi.getById(1)
 
@@ -47,7 +48,7 @@ describe('invoiceApi', () => {
 
   it('approve puts to /invoices/:id/approve', async () => {
     const mockPut = vi.mocked(apiClient.put)
-    mockPut.mockResolvedValue({ data: { success: true } } as any)
+    mockPut.mockResolvedValue(mockApiResponse(null))
 
     await invoiceApi.approve(1, { invoiceNumber: 'INV-001' })
 

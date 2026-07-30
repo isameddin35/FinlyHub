@@ -124,6 +124,24 @@
 .fha-spinner:after{ content:''; width:24px; height:24px; border:3px solid #E2E8F0; border-top-color:#2563EB; border-radius:50%; animation:fha-spin 0.6s linear infinite; }
 @keyframes fha-spin{ to{ transform:rotate(360deg); } }
 
+.dark .fha-new-chat{ background:#1E293B; border-color:#334155; color:#E2E8F0; }
+.dark .fha-thread:hover{ background:rgba(37,99,235,0.1); }
+.dark .fha-thread.fha-active{ background:rgba(37,99,235,0.15); border-color:rgba(59,130,246,0.3); }
+.dark .fha-thread-title{ color:#E2E8F0; }
+.dark .fha-thread-sub{ color:#64748B; }
+.dark .fha-chat-col{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fha-source-card{ background:rgba(15,23,42,0.8); border-color:#334155; }
+.dark .fha-source-text{ color:#94A3B8; }
+.dark .fha-source-pct{ background:#1E293B; color:#94A3B8; }
+.dark .fha-msg-row.fha-ai .fha-bubble{ background:rgba(30,41,59,0.8); color:#E2E8F0; }
+.dark .fha-input-row{ background:rgba(0,0,0,0.2); border-color:#334155; }
+.dark .fha-input-row input{ background:#1E293B; border-color:#334155; color:#E2E8F0; }
+.dark .fha-ai-content code{ background:#334155; }
+.dark .fha-ai-content th, .dark .fha-ai-content td{ border-color:#334155; }
+.dark .fha-ai-content th{ background:#1E293B; }
+.dark .fha-ai-content blockquote{ border-left-color:#475569; color:#94A3B8; }
+.dark .fha-empty-text{ color:#94A3B8; }
+.dark .fha-empty-sub{ color:#64748B; }
 @media (max-width:860px){
   .fha-root{ flex-direction:column; height:auto; }
   .fha-threads{ width:100%; flex-direction:row; overflow-x:auto; }

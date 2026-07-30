@@ -1,6 +1,7 @@
 package com.finlyhub.invoice.controller;
 
 import com.finlyhub.common.dto.ApiResponse;
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
 import com.finlyhub.common.util.SecurityUtils;
 import com.finlyhub.invoice.dto.InvoiceApprovalRequest;
@@ -12,6 +13,7 @@ import com.finlyhub.invoice.repository.InvoiceRepository;
 import com.finlyhub.invoice.service.InvoiceProcessingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
@@ -55,6 +57,7 @@ public class InvoiceController {
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<InvoiceResponse>> getInvoice(@PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId();
         Invoice invoice = invoiceRepository.findById(id)
@@ -133,7 +136,7 @@ public class InvoiceController {
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to generate Excel export", e);
+            throw new BusinessException("Failed to generate Excel export");
         }
     }
 

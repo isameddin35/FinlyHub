@@ -7,6 +7,8 @@ export interface Document {
   documentType: string
   status: 'UPLOADED' | 'PROCESSING' | 'INDEXED' | 'ERROR'
   errorMessage?: string
+  totalChunks: number
+  indexedChunks: number
   createdAt: string
   updatedAt: string
 }

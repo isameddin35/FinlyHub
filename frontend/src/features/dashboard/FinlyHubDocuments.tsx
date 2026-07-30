@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { documentApi } from '@/api/documents'
@@ -56,11 +55,28 @@ const CSS = `
 .fhdc-icon-btn.fhdc-danger:hover svg{ stroke:#DC2626; }
 .fhdc-icon-btn.fhdc-danger:hover{ border-color:rgba(220,38,38,0.4); }
 
+.fhdc-progress-wrapper{ display:flex; align-items:center; gap:8px; min-width:140px; }
+.fhdc-progress-track{ flex:1; height:5px; border-radius:99px; background:#F1F5F9; overflow:hidden; }
+.fhdc-progress-fill{ height:100%; border-radius:99px; background:linear-gradient(90deg, #2563EB, #7C3AED); transition:width 0.4s ease; }
+.fhdc-progress-pct{ font-size:10.5px; font-weight:700; color:#2563EB; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .fhdc-spinner{ display:flex; justify-content:center; padding:30px 0; }
 .fhdc-spinner:after{ content:''; width:24px; height:24px; border:3px solid #E2E8F0; border-top-color:#2563EB; border-radius:50%; animation:fhdc-spin 0.6s linear infinite; }
 @keyframes fhdc-spin{ to{ transform:rotate(360deg); } }
 
 .fhdc-error{ text-align:center; padding:30px 0; font-size:13.5px; color:#DC2626; }
+.dark .fhdc-header h2{ color:#F1F5F9; }
+.dark .fhdc-header p{ color:#94A3B8; }
+.dark .fhdc-panel{ background:rgba(15,23,42,0.85); border-color:#334155; }
+.dark .fhdc-panel h3{ color:#F1F5F9; }
+.dark .fhdc-dropzone{ border-color:#334155; background:rgba(15,23,42,0.6); }
+.dark .fhdc-dropzone:hover{ border-color:#3B82F6; background:rgba(37,99,235,0.08); }
+.dark .fhdc-dropzone .fhdc-drop-title{ color:#E2E8F0; }
+.dark .fhdc-doc-row{ border-color:#1E293B; }
+.dark .fhdc-doc-name{ color:#E2E8F0; }
+.dark .fhdc-progress-track{ background:#1E293B; }
+.dark .fhdc-progress-pct{ color:#60A5FA; }
+.dark .fhdc-icon-btn{ background:#1E293B; border-color:#334155; }
+.dark .fhdc-icon-btn svg{ stroke:#94A3B8; }
 `;
 
 function formatFileSize(bytes: number): string {
@@ -169,7 +185,7 @@ export function FinlyHubDocuments() {
           <svg viewBox="0 0 24 24"><path d="M12 15.5V4.5M8 8.5l4-4 4 4" /><path d="M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15" /></svg>
           Upload Document
         </h3>
-        <label className={`fhdc-dropzone${uploadMutation.isPending ? ' fhdc-disabled' : ''}`} style={{ display: "block" }}>
+        <label className={`fhdc-dropzone${uploadMutation.isPending ? ' fhdc-disabled' : ''}`} style={{ display: "block" }} aria-label="Upload document">
           <input type="file" style={{ display: "none" }} onChange={onUpload} disabled={uploadMutation.isPending} />
           <svg viewBox="0 0 24 24" style={{ display: "block", margin: "0 auto 10px" }}><path d="M12 15.5V4.5M8 8.5l4-4 4 4" /><path d="M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15" /></svg>
           <div className="fhdc-drop-title">
@@ -205,10 +221,19 @@ export function FinlyHubDocuments() {
                     <div style={{ fontSize: '11.5px', color: '#DC2626', marginTop: 4 }}>{d.errorMessage}</div>
                   )}
                 </div>
-                <span style={{
-                  fontSize: '10.5px', fontWeight: 700, padding: '4px 10px', borderRadius: 999,
-                  background: ss.bg, color: ss.color, whiteSpace: 'nowrap',
-                }}>{ss.label}</span>
+                {d.status === 'PROCESSING' && d.totalChunks > 0 ? (
+                  <div className="fhdc-progress-wrapper">
+                    <div className="fhdc-progress-track">
+                      <div className="fhdc-progress-fill" style={{ width: `${Math.round((d.indexedChunks / d.totalChunks) * 100)}%` }} />
+                    </div>
+                    <span className="fhdc-progress-pct">{Math.round((d.indexedChunks / d.totalChunks) * 100)}%</span>
+                  </div>
+                ) : (
+                  <span style={{
+                    fontSize: '10.5px', fontWeight: 700, padding: '4px 10px', borderRadius: 999,
+                    background: ss.bg, color: ss.color, whiteSpace: 'nowrap',
+                  }}>{ss.label}</span>
+                )}
                 <div className="fhdc-doc-actions">
                   {(d.status === 'ERROR' || d.status === 'UPLOADED') && (
                     <button

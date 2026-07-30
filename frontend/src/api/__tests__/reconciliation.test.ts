@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { reconciliationApi } from '@/api/reconciliation'
 import apiClient from '@/api/client'
+import { mockApiResponse } from './test-utils'
 
 vi.mock('@/api/client', () => ({
   default: {
@@ -15,7 +16,7 @@ describe('reconciliationApi', () => {
 
   it('match posts files to /reconciliation/match', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     const bankFile = new File(['b'], 'bank.csv')
     const acctFile = new File(['a'], 'acct.csv')
@@ -30,7 +31,7 @@ describe('reconciliationApi', () => {
 
   it('list gets /reconciliation', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true, data: [] } } as any)
+    mockGet.mockResolvedValue(mockApiResponse([]))
 
     await reconciliationApi.list()
 
@@ -39,7 +40,7 @@ describe('reconciliationApi', () => {
 
   it('getById gets /reconciliation/:id', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true } } as any)
+    mockGet.mockResolvedValue(mockApiResponse(null))
 
     await reconciliationApi.getById(1)
 
@@ -48,7 +49,7 @@ describe('reconciliationApi', () => {
 
   it('approve puts to /reconciliation/:id/approve', async () => {
     const mockPut = vi.mocked(apiClient.put)
-    mockPut.mockResolvedValue({ data: { success: true } } as any)
+    mockPut.mockResolvedValue(mockApiResponse(null))
 
     await reconciliationApi.approve(1)
 

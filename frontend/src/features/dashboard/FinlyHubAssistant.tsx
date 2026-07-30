@@ -35,7 +35,7 @@ export function FinlyHubAssistant() {
   })
 
   const createMutation = useMutation({
-    mutationFn: () => chatbotApi.createConversation(),
+    mutationFn: () => chatbotApi.createConversation({ title: 'New Chat' }),
     onSuccess: (conversation) => {
       queryClient.invalidateQueries({ queryKey: ['chatConversations'] })
       setActiveConversation(conversation)
@@ -81,9 +81,11 @@ export function FinlyHubAssistant() {
     return result
   }, [serverMessages, streamingContent, lastUserMessage, activeConversation?.id])
 
+  const messageCount = serverMessages?.length ?? 0
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-  }, [displayMessages])
+  }, [messageCount, streamingContent !== ''])
 
   useEffect(() => {
     if (!isStreaming) inputRef.current?.focus()
