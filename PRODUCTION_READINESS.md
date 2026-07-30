@@ -21,8 +21,8 @@
 
 | ID | Task | Owner | Status | Notes |
 |----|------|-------|--------|-------|
-| INFRA-001 | Add healthcheck to backend Dockerfile | | ⏳ | `curl -f http://localhost:8080/actuator/health` |
-| INFRA-002 | Add healthcheck to frontend Dockerfile | | ⏳ | `wget -q --spider http://localhost:5173` |
+| INFRA-001 | Add healthcheck to backend Dockerfile | | 🔄 | Deploy-time health check in `deploy.sh` (curl loop); Dockerfile HEALTHCHECK still PENDING |
+| INFRA-002 | Add healthcheck to frontend Dockerfile | | 🔄 | Deploy-time health check in `deploy.sh` (wget loop); Dockerfile HEALTHCHECK still PENDING |
 | INFRA-003 | Add resource limits (CPU/RAM) to all services in docker-compose.yml | | ⏳ | backend: 2CPU/2GB, ollama: 4GB, frontend: 0.5CPU/512MB |
 | INFRA-004 | Add `restart: unless-stopped` to all services | | ⏳ | Auto-recover from crashes |
 | INFRA-005 | Enable Spring Boot Actuator + Prometheus endpoint | | ⏳ | `management.endpoints.web.exposure.include=health,prometheus` |
@@ -177,7 +177,7 @@
 
 | ID | Task | Effort | Impact |
 |----|------|--------|--------|
-| QW-001 | Add healthchecks to docker-compose | 15 min | High |
+| QW-001 | Add healthchecks to docker-compose | 15 min | High | 🟢 Done — deploy-time health checks in `deploy.sh` |
 | QW-002 | Add resource limits to docker-compose | 10 min | High |
 | QW-003 | Add restart policies | 5 min | High |
 | QW-004 | Enable Actuator + Prometheus | 30 min | High |
@@ -193,8 +193,8 @@
 - [ ] All P0 tasks ✅
 - [ ] All P1 tasks ✅
 - [ ] Load test passes: 1000 concurrent users, p99 < 2s, error rate < 0.1%
-- [ ] Zero-downtime deploy verified
-- [ ] Rollback tested (< 2 min)
+- [ ] Zero-downtime deploy verified (sequential `--no-deps` + health check loops in `deploy.sh`)
+- [ ] Rollback tested (< 2 min) (`deploy/rollback.sh` exists)
 - [ ] Secrets rotation tested
 - [ ] DR drill: RDS failover + restore < 15 min
 - [ ] Security scan clean (Critical/High = 0)
@@ -222,5 +222,7 @@
 - `backend/src/main/resources/application.yml` — Spring config
 - `.github/workflows/ci.yml` / `deploy.yml` — CI/CD
 - `deploy/deploy.sh` — EC2 deploy script
+- `deploy/rollback.sh` — EC2 rollback script
+- `deploy/terraform/` — Infrastructure as Code (AWS)
 - `POSTGRES_MIGRATION_PLAN.md` — (to create) RDS migration steps
 - `ECS_TERRAFORM/` — (to create) Infrastructure as Code

@@ -18,7 +18,7 @@
 - [x] **Backend Dockerfile** — Multi-stage (Maven build → Alpine JRE + Tesseract)
 - [x] **Frontend Vite project** — React 19, TypeScript 5.7, Tailwind 3.4, shadcn/ui
 - [x] **Frontend Dockerfile + nginx** — Multi-stage build, SPA fallback, `/api` proxy
-- [x] **Liquibase changelogs** — 15 YAML files (V001–V015), 56 changesets, 17 tables
+- [x] **Liquibase changelogs** — 18 YAML files (V001–V018), 17 tables
 - [x] **JWT authentication** — Login/register/refresh with access + refresh tokens
 - [x] **Spring Security** — Stateless sessions, CORS, role-based guards
 - [x] **Global exception handler** — `@RestControllerAdvice` with typed HTTP codes
@@ -86,7 +86,7 @@
 - [x] **User isolation for RAG** — `searchRelevantDocuments()` JOINs `document_chunks` with `documents` on `document_id`
 - [x] **Fixed document upload INSERT** — Replaced `chunkRepository.saveAll()` with native SQL `INSERT ... cast(? as vector)`
 - [x] **Added approved invoices Excel export** — `GET /api/invoices/export` returns XLSX workbook via `XSSFWorkbook`
-- [x] **Fixed CI/CD — added --build flag** — `deploy.sh` changed to `docker compose up -d --build`
+- [x] **Fixed CI/CD — sequential zero-downtime deploy** — build images first, then `--no-deps` per-service restart with health check loops, plus `deploy/rollback.sh`
 - [x] **Made invoice fields editable before approval** — Replaced `ConfidenceField` with editable form inputs in dialog
 
 ## Phase 4: UI Improvements

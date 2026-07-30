@@ -53,7 +53,7 @@ cd backend
 # Ensure PostgreSQL is running on localhost:5432
 # (or use: docker compose up postgres -d)
 
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 **Frontend:**
@@ -94,11 +94,16 @@ See `.env.example` for all configurable variables. Key ones:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `POSTGRES_DB` | finlyhub | Database name |
+| `POSTGRES_USER` | finlyhub | Database user |
+| `POSTGRES_PASSWORD` | (required) | Database password |
 | `JWT_SECRET` | (required) | Base64-encoded 256+ bit secret |
+| `JWT_EXPIRATION` | 86400000 | Access token TTL (ms) |
+| `JWT_REFRESH_EXPIRATION` | 604800000 | Refresh token TTL (ms) |
 | `AI_PROVIDER` | mock | `mock` (no key) or `openai` (Groq chat) |
 | `OPENAI_API_KEY` | - | Groq API key (if provider is `openai`) |
 | `OPENAI_BASE_URL` | https://api.groq.com/openai/v1 | Groq-compatible API base URL |
 | `OPENAI_MODEL` | llama-3.1-8b-instant | Chat model |
+| `VITE_API_URL` | /api | Frontend API proxy path |
 
 ## Project Structure
 
@@ -132,8 +137,10 @@ finlyhub/
 │   └── vite.config.ts
 ├── docker-compose.yml
 ├── deploy/
-│   ├── deploy.sh              # EC2 deployment script (SSM → git pull + compose)
-│   └── docker-compose.prod.yml
+│   ├── deploy.sh              # EC2 deployment script (SSM → git pull + sequential rebuild + health checks)
+│   ├── rollback.sh            # Git revert + rebuild for rollback
+│   ├── docker-compose.prod.yml
+│   └── terraform/             # Infrastructure as Code (AWS)
 └── .env.example
 ```
 
@@ -209,7 +216,9 @@ docker compose up --build -d
 
 ### CI/CD Pipeline
 
-Pushing to `main` triggers a **GitHub Actions** workflow that SSM-connects to the EC2 instance and runs `deploy/deploy.sh` (git pull + docker compose up --build). Secrets (JWT, DB password, Groq API key) are fetched from AWS SSM Parameter Store.
+Pushing to `main` triggers a **GitHub Actions** CI workflow (tests backend + frontend). On success, a deploy workflow SSM-connects to the EC2 instance and runs `deploy/deploy.sh`: git pull → build images → sequential service restart with `--no-deps` (postgres stays up) → health check loop before the next service starts. Secrets (JWT, DB password, Groq API key) are fetched from AWS SSM Parameter Store.
+
+Rollback: `sudo bash deploy/rollback.sh` reverts to the previous commit and rebuilds.
 
 ### Production Considerations
 

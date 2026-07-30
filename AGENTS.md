@@ -6,7 +6,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 
 **Target:** Investor demo with realistic mock data.
 
-**Status:** MVP — all features implemented, ~31+ bugs fixed, runs via `docker compose up`.
+**Status:** MVP — all features implemented, 50+ bugs fixed, runs via `docker compose up`.
 
 ---
 
@@ -134,14 +134,16 @@ finlyhub/
 
 ## CI/CD Pipeline
 
-- **GitHub Actions** — `.github/workflows/deploy.yml` triggers on push to `main`
-- **Deploy**: Uses `aws-actions/configure-aws-credentials` to auth, then `aws ssm send-command` to run `deploy/deploy.sh` on EC2 (`docker compose up -d --build`)
+- **GitHub Actions** — CI runs on push (test backend + frontend), then deploy triggers on CI success
+- **Deploy**: Uses `aws-actions/configure-aws-credentials` to auth, then `aws ssm send-command` to run `deploy/deploy.sh` on EC2 (sequential `--no-deps` rebuild with health checks)
+- **Rollback**: `sudo bash deploy/rollback.sh` reverts to previous commit and rebuilds
 - **Secrets** stored in GitHub repo: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - **Secrets for production** (JWT, DB password) stored in AWS SSM Parameter Store, fetched by `deploy/deploy.sh`
 
 ## Testing
 
-- **No tests exist yet.** The project was built for a demo, not production.
+- **Backend tests** (JUnit 5 + Mockito) in `backend/src/test/java/`
+- **Frontend tests** (Vitest) in `frontend/src/api/__tests__/`
 - **Verification**: Run `docker compose up -d` and test endpoints via curl or the frontend.
 - **Demo users**: `admin@finlyhub.com`, `accountant@finlyhub.com`, `viewer@finlyhub.com` — all with password `password`.
 

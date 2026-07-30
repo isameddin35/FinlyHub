@@ -210,6 +210,8 @@ Still references Ollama, nomic-embed-text, 768-dim vectors — all outdated sinc
 
 Still writes Ollama env vars (`OPENAI_EMBEDDING_MODEL=nomic-embed-text`, `OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1`) and tries to clean up qwen2 container.
 
+Later upgraded to sequential `--no-deps` rebuilds with health check loops and a separate `deploy/rollback.sh`.
+
 **Effort:** ~30min
 
 ---

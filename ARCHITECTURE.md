@@ -180,7 +180,7 @@ Store chunk + embedding in document_chunks
 [Later] User asks chatbot question
     │
     ▼
-Embed question → pgvector `<->` (cosine distance) → top-3 chunks
+Embed question → pgvector `<=>` (cosine distance) → top-3 chunks
     │
     ▼
 Build context prompt → AiService.chat() → Response with source citations
@@ -333,6 +333,8 @@ Vol:   pgdata:/var/lib/pgdata    Vol:  uploads:/app/uploads       (stateless)
         Health: pg_isready         Depends: postgres (healthy)      Depends: backend (basic)
 
 Embeddings run in-JVM via ONNX Runtime (bge-small-en-v1.5) — no external embedding service.
+
+**Deploy workflow:** Build images → start postgres (if not running) → restart backend with `--no-deps` → health check loop (30 attempts × 5s) → restart frontend with `--no-deps` → health check loop. Postgres stays up throughout. Rollback via `deploy/rollback.sh`.
 ```
 
 ### Build Process
@@ -342,8 +344,8 @@ Frontend:                     Backend:
   node:22-alpine                maven:3.9-eclipse-temurin-21
     npm ci                        mvn dependency:resolve
     npm run build                 mvn package -DskipTests
-  nginx:alpine                  eclipse-temurin:21-jre-alpine
-    COPY dist/ → nginx/html       apk add tesseract-ocr
+  nginx:alpine                  eclipse-temurin:21-jre-jammy
+    COPY dist/ → nginx/html       apt-get install -y tesseract-ocr tesseract-ocr-eng
     COPY nginx.conf                COPY app.jar
                                   java -jar app.jar
 ```
