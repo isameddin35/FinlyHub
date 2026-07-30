@@ -759,6 +759,39 @@ function Shattered({ text, id, accent, wordRef }: {
 
 
 
+function LazyVideo({ src, poster }: { src: string; poster: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.unobserve(el);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref}>
+      {visible ? (
+        <video autoPlay muted loop playsInline poster={poster}>
+          <source src={src} type="video/mp4" />
+        </video>
+      ) : (
+        <img src={poster} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+      )}
+    </div>
+  );
+}
+
 function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal }: {
   index: number; ax: string; ay: string; az: string; icon: React.ReactNode;
   title: string; text: string; delay: string; registerReveal: (el: Element) => void;
@@ -1021,7 +1054,7 @@ export function FinlyHubLanding() {
         <div className="fh-video-showcase">
           <div className="fh-video-row">
             <div className="fh-video-card">
-              <video autoPlay muted loop playsInline preload="auto">
+              <video autoPlay muted loop playsInline poster="assets/clip-1-poster.jpg">
                 <source src="assets/clip-1-scan.mp4" type="video/mp4" />
               </video>
               <div className="fh-video-overlay" />
@@ -1032,9 +1065,7 @@ export function FinlyHubLanding() {
             </div>
 
             <div className="fh-video-card">
-              <video autoPlay muted loop playsInline preload="auto">
-                <source src="assets/clip-2-dashboard.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo src="assets/clip-2-dashboard.mp4" poster="assets/clip-2-poster.jpg" />
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
                 <span className="fh-live-dot" />
@@ -1043,9 +1074,7 @@ export function FinlyHubLanding() {
             </div>
 
             <div className="fh-video-card">
-              <video autoPlay muted loop playsInline preload="auto">
-                <source src="assets/clip-3-approved.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo src="assets/clip-3-approved.mp4" poster="assets/clip-3-poster.jpg" />
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
                 <span className="fh-live-dot" />
