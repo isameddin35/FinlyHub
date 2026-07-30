@@ -8,7 +8,7 @@
 │ (React)  │       │ (5173)   │       │ Backend :8080 │       │ + pgvector       │
 └──────────┘       └──────────┘       └──────────────┘       └──────────────────┘
      ▲                   │                                        │
-     │                   │ /api/health                            │ vector(768)
+     │                   │ /api/health                            │ vector(384)
      │                   └──┬── /api/* ──── backend:8080          │ IVFFLAT index
      │                      │                                     │
      │                ┌─────┴──────┐                              │
@@ -85,7 +85,7 @@
 
 ```
 roles ──< user_roles >── users ──┬── documents ──< document_chunks
-                                  │                    (vector(768))
+                                  │                    (vector(384))
                                   │
                                   ├── invoice_documents ──< invoices
                                   │     (V010 split from   │
@@ -116,7 +116,7 @@ roles ──< user_roles >── users ──┬── documents ──< documen
 | 2 | `users` | User accounts | email (UNIQUE), password_hash |
 | 3 | `user_roles` | Many-to-many join | user_id, role_id |
 | 4 | `documents` | General-purpose document store | user_id, document_type, status, raw_text |
-| 5 | `document_chunks` | RAG text chunks with embeddings | document_id, chunk_index, embedding (vector(768)) |
+| 5 | `document_chunks` | RAG text chunks with embeddings | document_id, chunk_index, embedding (vector(384)) |
 | 6 | `invoice_documents` | Invoice-specific file metadata | user_id, filename, file_path |
 | 7 | `invoices` | Extracted invoice data | user_id, document_id, vendor, amounts, status |
 | 8 | `invoice_extractions` | OCR + AI extraction history | invoice_id, stage, extracted_data (JSONB) |
@@ -171,7 +171,7 @@ Parse text (PDFBox/POI)
 Chunk (512 tokens, 64-token overlap)
     │
     ▼
-For each chunk: AiService.generateEmbedding → [0.15, -0.02, ...] (768 dims)
+For each chunk: AiService.generateEmbedding → [0.15, -0.02, ...] (384 dims)
     │
     ▼
 Store chunk + embedding in document_chunks
@@ -180,7 +180,7 @@ Store chunk + embedding in document_chunks
 [Later] User asks chatbot question
     │
     ▼
-Embed question → pgvector `<->` (cosine distance) → top-3 chunks
+Embed question → pgvector `<=>` (cosine distance) → top-3 chunks
     │
     ▼
 Build context prompt → AiService.chat() → Response with source citations
@@ -225,36 +225,36 @@ User approves → Reconciliation COMPLETED → APPROVED
 ## AI Layer
 
 ```
-          ┌───────────────────────────────────────┐
-          │         AiService (interface)          │
-          │                                       │
-          │  +extractInvoiceData(text)            │
-          │  +chat(ChatRequest)                   │
-          │  +generateEmbedding(text)             │
-          │  +categorizeTransaction(tx)           │
-          └──────────┬────────────────────────────┘
-                     │
-           implements│
-            ┌───────┴────────┐
-            │                │
-            ▼                ▼
-    ┌──────────────┐  ┌──────────────────────┐
-    │ MockAiService │  │   OpenAiAiService    │
-    │(ai.provider=  │  │  (ai.provider=openai)│
-    │  mock)        │  │                      │
-    │ deterministic │  │                      │
-    │ random data   │  │  Dual OpenAiService  │
-    │ no API key    │  │  ┌────────┐ ┌──────┐│
-    └──────────────┘  │  │ Chat   │ │Embeds││
-                      │  │(Groq)  │ │Ollama││
-                      │  │llama-  │ │nomic-││
-                      │  │3.1-8b  │ │embed ││
-                      │  │instant │ │768dim││
-                      │  └────────┘ └──────┘│
-                      └──────────────────────┘
+           ┌───────────────────────────────────────┐
+           │         AiService (interface)          │
+           │                                       │
+           │  +extractInvoiceData(text)            │
+           │  +chat(ChatRequest)                   │
+           │  +generateEmbedding(text)             │
+           │  +categorizeTransaction(tx)           │
+           └──────────┬────────────────────────────┘
+                      │
+            implements│
+             ┌───────┴────────┐
+             │                │
+             ▼                ▼
+     ┌──────────────┐  ┌──────────────────────┐
+     │ MockAiService │  │   OpenAiAiService    │
+     │(ai.provider=  │  │  (ai.provider=openai)│
+     │  mock)        │  │                      │
+     │ deterministic │  │  ┌──────────────────┐│
+     │ random data   │  │  │   OpenAiService  ││
+     │ no API key    │  │  │  (Chat via Groq) ││
+     └──────────────┘  │  └──────────────────┘│
+                       │                      │
+                       │  Embeddings: ONNX    │
+                       │  Runtime + DJL       │
+                       │  (bge-small-en-v1.5) │
+                       │  384-dim, in-JVM     │
+                       └──────────────────────┘
 ```
 
-**Selection logic** (`OpenAiConfig.java`): `@ConditionalOnProperty(name = "ai.provider", havingValue = "openai")` creates `OpenAiAiService` with dual `OpenAiService` instances — one for chat (Groq) and one for embeddings (Ollama). When `ai.provider=mock` (or unset), `MockAiService` is created. The `.env` defaults to `AI_PROVIDER=openai`.
+**Selection logic** (`OpenAiConfig.java`): `@ConditionalOnProperty(name = "ai.provider", havingValue = "openai")` creates `OpenAiAiService` with chat via Groq. Embeddings run in-JVM via ONNX Runtime + DJL Tokenizers (bge-small-en-v1.5, 384-dim) — no external embedding service needed. When `ai.provider=mock` (or unset), `MockAiService` is created.
 
 **Groq path fix**: `OpenAiApi` uses `@POST("/v1/chat/completions")` — leading slash causes absolute path resolution in OkHttp, dropping `/openai/` from the base URL. An interceptor rewrites `/v1/{path}` → `/openai/v1/{path}` for the Groq client only.
 
@@ -315,7 +315,7 @@ User approves → Reconciliation COMPLETED → APPROVED
 ## Deployment Architecture
 
 ```
-Docker Compose (4 services)
+Docker Compose (3 services)
 ═══════════════════════════
 
 Network: finlyhub_default (bridge)
@@ -332,14 +332,9 @@ Vol:   pgdata:/var/lib/pgdata    Vol:  uploads:/app/uploads       (stateless)
                                          AI_PROVIDER (mock|openai)
         Health: pg_isready         Depends: postgres (healthy)      Depends: backend (basic)
 
-ollama
-──────
-Image: ollama/ollama:latest
-Port:  11434
-Vol:   ollama:/root/.ollama
-Entry: ollama pull nomic-embed-text
-Health: ollama list | grep -q nomic-embed-text
-Depends: (none)
+Embeddings run in-JVM via ONNX Runtime (bge-small-en-v1.5) — no external embedding service.
+
+**Deploy workflow:** Build images → start postgres (if not running) → restart backend with `--no-deps` → health check loop (30 attempts × 5s) → restart frontend with `--no-deps` → health check loop. Postgres stays up throughout. Rollback via `deploy/rollback.sh`.
 ```
 
 ### Build Process
@@ -349,8 +344,8 @@ Frontend:                     Backend:
   node:22-alpine                maven:3.9-eclipse-temurin-21
     npm ci                        mvn dependency:resolve
     npm run build                 mvn package -DskipTests
-  nginx:alpine                  eclipse-temurin:21-jre-alpine
-    COPY dist/ → nginx/html       apk add tesseract-ocr
+  nginx:alpine                  eclipse-temurin:21-jre-jammy
+    COPY dist/ → nginx/html       apt-get install -y tesseract-ocr tesseract-ocr-eng
     COPY nginx.conf                COPY app.jar
                                   java -jar app.jar
 ```
@@ -372,8 +367,8 @@ Frontend:                     Backend:
 | Decision | Rationale |
 |----------|-----------|
 | **pgvector over separate vector DB** | Reduces infra complexity; PostgreSQL with one extension vs running Qdrant/Pinecone |
-| **Groq for chat + Ollama for embeddings** | Groq's llama-3.1-8b-instant responds in <1s for free; Ollama's nomic-embed-text is 274MB and fast on CPU |
-| **Dual OpenAiService instances** | Separate clients for chat (Groq, 300s timeout) and embeddings (Ollama, 30s timeout) with independent base URLs and API keys |
+| **Groq for chat + ONNX for embeddings** | Groq's llama-3.1-8b-instant responds in <1s for free; ONNX Runtime + DJL (bge-small-en-v1.5) runs embeddings in-JVM with no external service |
+| **Single OpenAiService for chat only** | Embeddings run in-process via ONNX Runtime; no separate embedding service, API key, or network calls needed |
 | **OkHttp interceptor for Groq path fix** | Minimal code change — one interceptor rewrites `/v1/` → `/openai/v1/` to fix OkHttp absolute-path resolution |
 | **`cast(? as vector)` over `?::vector`** | `?::vector` causes PostgreSQL to infer parameter as vector type; JDBC can't serialize String as vector. `cast(? as vector)` keeps parameter as unknown/text |
 | **Embedding failure returns empty list** | `List.of()` avoids semantically meaningless noise; chat still works without document context |
@@ -385,7 +380,6 @@ Frontend:                     Backend:
 | **Liquibase YAML over Hibernate DDL** | Explicit, version-controlled, auditable migrations |
 | **Demo profile for seed data** | Clean separation: schema always, seed only for demo/investor preview |
 | **`ApiResponse<T>` envelope** | Consistent frontend error handling; every response has the same shape |
-| **DemoAccountCloner (bootstrap)** | `CommandLineRunner` clones admin's data (invoices, transactions, docs, chats, reconciliations, audit logs) into 10 demo accounts (`demo01–demo10`) for hallway demos — each user sees personalized data |
 | **`/role-select` landing page** | Guests land on role selection instead of raw login; one-click demo login as admin/accountant/viewer; logout returns to `/role-select` |
 | **Native SQL over JPA for bulk inserts** | `entityManager.createNativeQuery()` with `cast(? as vector)` / `cast(? as jsonb)` avoids `@Lob` pitfalls and type serialization errors in PostgreSQL |
 | **`SecurityUtils` static helper** | Avoids injecting `SecurityContextHolder` boilerplate in every service |

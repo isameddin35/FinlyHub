@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { authApi } from '@/api/auth'
 import apiClient from '@/api/client'
+import { mockApiResponse } from './test-utils'
 
 vi.mock('@/api/client', () => ({
   default: {
@@ -17,7 +18,7 @@ describe('authApi', () => {
 
   it('login posts to /auth/login with credentials', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true, data: { accessToken: 'token' } } } as any)
+    mockPost.mockResolvedValue(mockApiResponse({ accessToken: 'token' }))
 
     await authApi.login({ email: 'admin@test.com', password: 'pass' })
 
@@ -29,7 +30,7 @@ describe('authApi', () => {
 
   it('register posts to /auth/register with user data', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     await authApi.register({
       firstName: 'John',
@@ -48,7 +49,7 @@ describe('authApi', () => {
 
   it('refresh posts refresh token to /auth/refresh', async () => {
     const mockPost = vi.mocked(apiClient.post)
-    mockPost.mockResolvedValue({ data: { success: true } } as any)
+    mockPost.mockResolvedValue(mockApiResponse(null))
 
     await authApi.refresh('refresh-token-value')
 
@@ -59,7 +60,7 @@ describe('authApi', () => {
 
   it('getProfile gets /users/me', async () => {
     const mockGet = vi.mocked(apiClient.get)
-    mockGet.mockResolvedValue({ data: { success: true } } as any)
+    mockGet.mockResolvedValue(mockApiResponse(null))
 
     await authApi.getProfile()
 

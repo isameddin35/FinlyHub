@@ -2,6 +2,7 @@ package com.finlyhub.reconciliation.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finlyhub.common.util.FileParsingUtils;
 import com.finlyhub.common.exception.ResourceNotFoundException;
 import com.finlyhub.reconciliation.dto.*;
 import com.finlyhub.reconciliation.entity.Reconciliation;
@@ -13,6 +14,7 @@ import com.finlyhub.reconciliation.repository.ReconciliationEntryRepository;
 import com.finlyhub.reconciliation.repository.ReconciliationRepository;
 import com.finlyhub.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -27,7 +29,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class ReconciliationService {
 
     private final ReconciliationRepository reconciliationRepository;
@@ -210,7 +212,7 @@ public class ReconciliationService {
                     bankEntry.setMatchEvidence(evidenceJson);
                     bestMatch.setMatchEvidence(evidenceJson);
                 } catch (JsonProcessingException e) {
-                    // ignore evidence serialization failure
+                    log.error("Failed to serialize match evidence", e);
                 }
 
                 unmatchedAccounting.remove(bestMatch);
@@ -283,11 +285,17 @@ public class ReconciliationService {
 
         if (row.length > 0) entry.setDescription(row[0].trim());
         if (row.length > 1) {
-            LocalDate date = parseDate(row[1].trim());
-            entry.setTransactionDate(date);
+            LocalDate date = FileParsingUtils.parseDate(row[1].trim(),
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                    DateTimeFormatter.ofPattern("MM-dd-yyyy"),
+                    DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            entry.setTransactionDate(date != null ? date : LocalDate.now());
         }
         if (row.length > 2) {
-            BigDecimal amount = parseAmount(row[2].trim());
+            BigDecimal amount = FileParsingUtils.parseAmount(row[2].trim());
             entry.setAmount(amount);
         }
         if (row.length > 3) {
@@ -295,41 +303,6 @@ public class ReconciliationService {
         }
 
         return entry;
-    }
-
-    private LocalDate parseDate(String value) {
-        if (value == null || value.isEmpty()) return LocalDate.now();
-        String[] patterns = {"yyyy-MM-dd", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy/MM/dd", "MM-dd-yyyy", "dd-MM-yyyy"};
-        for (String pattern : patterns) {
-            try {
-                return LocalDate.parse(value, DateTimeFormatter.ofPattern(pattern));
-            } catch (DateTimeParseException ignored) {
-            }
-        }
-        try {
-            return LocalDate.parse(value);
-        } catch (DateTimeParseException e) {
-            return LocalDate.now();
-        }
-    }
-
-    private BigDecimal parseAmount(String value) {
-        if (value == null || value.isEmpty()) return BigDecimal.ZERO;
-        String cleaned = value.replaceAll("[^\\d.,-]", "");
-        if (cleaned.contains(",") && cleaned.contains(".")) {
-            if (cleaned.lastIndexOf('.') > cleaned.lastIndexOf(',')) {
-                cleaned = cleaned.replace(",", "");
-            } else {
-                cleaned = cleaned.replace(".", "").replace(",", ".");
-            }
-        } else if (cleaned.contains(",")) {
-            cleaned = cleaned.replace(",", ".");
-        }
-        try {
-            return new BigDecimal(cleaned);
-        } catch (NumberFormatException e) {
-            return BigDecimal.ZERO;
-        }
     }
 
     private List<String[]> parseFile(MultipartFile file) throws IOException {
@@ -360,41 +333,12 @@ public class ReconciliationService {
                 String[] rowData = new String[row.getLastCellNum()];
                 for (int i = 0; i < row.getLastCellNum(); i++) {
                     Cell cell = row.getCell(i);
-                    rowData[i] = cell != null ? getCellValue(cell) : "";
+                    rowData[i] = cell != null ? FileParsingUtils.getCellValue(cell) : "";
                 }
                 rows.add(rowData);
             }
         }
         return rows;
-    }
-
-    private String getCellValue(Cell cell) {
-        return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue();
-            case NUMERIC -> {
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    yield cell.getLocalDateTimeCellValue().toLocalDate().toString();
-                }
-                double val = cell.getNumericCellValue();
-                if (val == Math.floor(val) && !Double.isInfinite(val)) {
-                    yield String.valueOf((long) val);
-                }
-                yield String.valueOf(val);
-            }
-            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-            case FORMULA -> {
-                try {
-                    yield String.valueOf(cell.getNumericCellValue());
-                } catch (Exception e) {
-                    try {
-                        yield cell.getStringCellValue();
-                    } catch (Exception e2) {
-                        yield "";
-                    }
-                }
-            }
-            default -> "";
-        };
     }
 
     private ReconciliationResponse toResponse(Reconciliation reconciliation) {

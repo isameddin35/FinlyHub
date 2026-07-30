@@ -9,6 +9,7 @@ import com.finlyhub.chatbot.entity.Conversation;
 import com.finlyhub.chatbot.entity.Message;
 import com.finlyhub.chatbot.repository.ConversationRepository;
 import com.finlyhub.chatbot.repository.MessageRepository;
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
 import com.finlyhub.common.model.ChatRequest;
 import com.finlyhub.common.model.ChatResponse;
@@ -146,7 +147,7 @@ public class ChatbotService {
                         try {
                             emitter.send(SseEmitter.event().name("token").data(token));
                         } catch (Exception e) {
-                            throw new RuntimeException("SSE send failed", e);
+                            throw new BusinessException("SSE send failed");
                         }
                     },
                     () -> {
@@ -220,7 +221,7 @@ public class ChatbotService {
                 SourceDocument doc = SourceDocument.builder()
                         .documentId(row[1] != null ? ((Number) row[1]).longValue() : null)
                         .chunkIndex(row[2] != null ? ((Number) row[2]).intValue() : null)
-                        .excerpt(row[3] != null ? (String) row[3] : null)
+                        .excerpt(truncateExcerpt(row[3] != null ? (String) row[3] : null))
                         .filename(row[4] != null ? (String) row[4] : null)
                         .relevanceScore(row[5] != null ? ((Number) row[5]).doubleValue() : null)
                         .build();
@@ -301,7 +302,7 @@ public class ChatbotService {
                         .map(s -> SourceDto.builder()
                                 .documentId(s.getDocumentId())
                                 .filename(s.getFilename())
-                                .excerpt(s.getExcerpt())
+                                .excerpt(truncateExcerpt(s.getExcerpt()))
                                 .relevanceScore(s.getRelevanceScore())
                                 .chunkIndex(s.getChunkIndex())
                                 .build())
@@ -320,5 +321,12 @@ public class ChatbotService {
                 .confidenceScore(message.getConfidenceScore())
                 .createdAt(message.getCreatedAt())
                 .build();
+    }
+
+    private String truncateExcerpt(String excerpt) {
+        if (excerpt != null && excerpt.length() > 150) {
+            return excerpt.substring(0, 150) + "...";
+        }
+        return excerpt;
     }
 }

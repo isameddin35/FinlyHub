@@ -18,7 +18,7 @@
 - [x] **Backend Dockerfile** — Multi-stage (Maven build → Alpine JRE + Tesseract)
 - [x] **Frontend Vite project** — React 19, TypeScript 5.7, Tailwind 3.4, shadcn/ui
 - [x] **Frontend Dockerfile + nginx** — Multi-stage build, SPA fallback, `/api` proxy
-- [x] **Liquibase changelogs** — 15 YAML files (V001–V015), 56 changesets, 17 tables
+- [x] **Liquibase changelogs** — 18 YAML files (V001–V018), 17 tables
 - [x] **JWT authentication** — Login/register/refresh with access + refresh tokens
 - [x] **Spring Security** — Stateless sessions, CORS, role-based guards
 - [x] **Global exception handler** — `@RestControllerAdvice` with typed HTTP codes
@@ -41,7 +41,7 @@
 - [x] **Frontend pages** — Login, Register, Dashboard, Invoices, Copilot, Transactions, Reports, Reconciliation, Documents, Settings
 - [x] **Frontend API layer** — 8 typed API modules with Axios interceptors
 - [x] **Frontend routing** — Authenticated layout, public auth pages, catch-all redirect
-- [x] **Seed demo data** — 3 base users (admin/accountant/viewer) via Liquibase, plus 10 demo accounts (`demo01–demo10`) via DemoAccountCloner; 5 invoices, 9 transactions, 2 documents + 6 chunks, 3 conversations + 8 messages, 1 reconciliation + 11 entries, 4 audit logs, 3 notifications per user
+- [x] **Seed demo data** — 3 base users (admin/accountant/viewer) via Liquibase; 5 invoices, 9 transactions, 2 documents + 6 chunks, 3 conversations + 8 messages, 1 reconciliation + 11 entries, 4 audit logs, 3 notifications per user
 
 ## Phase 3: Bugfixes & Stabilization
 
@@ -73,20 +73,20 @@
 - [x] **Fix reconciliation status String vs enum comparison** — `"APPROVED".equals(r.getStatus())` always false with enum
 - [x] **Fix auto-categorization never triggered after import** — Injected `TransactionCategorizationService` into `TransactionImportService`, calls `categorizeBatch()` after `saveAll()`
 - [x] **Fix combobox transparency** — Added missing `--popover` CSS variables and Tailwind color mapping
-- [x] **Switch from Ollama chat to Groq** — Dual `OpenAiService`: Groq for chat (llama-3.1-8b-instant), Ollama for embeddings (nomic-embed-text only)
+- [x] **Switch from Ollama to Groq + ONNX** — Groq for chat (llama-3.1-8b-instant), ONNX Runtime + DJL for embeddings (bge-small-en-v1.5, 384-dim); Ollama fully removed
 - [x] **Fix Groq URL mismatch** — OkHttp interceptor rewrites `/v1/` → `/openai/v1/` to fix absolute-path resolution
-- [x] **Fix embedding connection inside Docker** — Changed `OPENAI_EMBEDDING_BASE_URL` from `localhost:11434` to `http://ollama:11434`
+- [x] **Fix embedding connection inside Docker** — Replaced Ollama-based embeddings with in-JVM ONNX Runtime + DJL (bge-small-en-v1.5, 384-dim); no external embedding service needed
 - [x] **Fix currency format error** — Updated extraction prompt for ISO 4217 codes; `formatCurrency` in utils maps symbols and wraps in try/catch
 - [x] **Chat duplication fix** (backend) — Moved `messageRepository.save(userMessage)` after `ChatRequest.build()`
 - [x] **Chat duplication fix** (frontend) — Replaced `optimisticMessages` with `pendingUserMessage` string state
 - [x] **Message alignment fix** — All `msg.role` comparisons use `.toLowerCase()`
 - [x] **Embedding fallback** — `generateEmbedding()` returns `List.of()` on failure
 - [x] **Vector operator** — Changed `<->` (L2) to `<=>` (cosine) with similarity score in `SourceDocument.relevanceScore`
-- [x] **Ollama slimmed** — Removed `ollama pull qwen2:1.5b` from entrypoint; healthcheck checks `nomic-embed-text`
+- [x] **Ollama removed** — Replaced with in-JVM ONNX embeddings (bge-small-en-v1.5); Ollama service no longer required
 - [x] **User isolation for RAG** — `searchRelevantDocuments()` JOINs `document_chunks` with `documents` on `document_id`
 - [x] **Fixed document upload INSERT** — Replaced `chunkRepository.saveAll()` with native SQL `INSERT ... cast(? as vector)`
 - [x] **Added approved invoices Excel export** — `GET /api/invoices/export` returns XLSX workbook via `XSSFWorkbook`
-- [x] **Fixed CI/CD — added --build flag** — `deploy.sh` changed to `docker compose up -d --build`
+- [x] **Fixed CI/CD — sequential zero-downtime deploy** — build images first, then `--no-deps` per-service restart with health check loops, plus `deploy/rollback.sh`
 - [x] **Made invoice fields editable before approval** — Replaced `ConfidenceField` with editable form inputs in dialog
 
 ## Phase 4: UI Improvements
@@ -98,14 +98,11 @@
 - [x] **Password visibility toggle** — Eye/EyeOff button in password fields on Login and Register pages
 - [x] **Dynamic page title in header** — Header title updates based on current route
 - [x] **Role selection landing page** — `/role-select` with one-click demo login as admin/accountant/viewer; logout redirects back here
-- [x] **Demo account pool** — `DemoAccountCloner` creates 10 accounts with cloned admin data for hallway demos
 - [x] **Login redirect fix** — `navigate('/dashboard')` after demo login (was missing, landing on blank page)
 
 ## Known Issues
 
 - **`VITE_API_URL` baked at build time** — Changing the env var at runtime has no effect in production; use nginx proxy fallback instead
-- **DemoAccountCloner fragile to schema changes** — Hand-written native SQL in `cloneDocuments`, `cloneReconciliationEntries`, `cloneAuditLogs` breaks silently if columns are added/removed
-- **No demo account pool for hall presentations** — Currently resolved: DemoAccountCloner creates 10 demo accounts, but runs only when `SPRING_PROFILES_ACTIVE=demo` and no demo accounts exist yet
 
 ## Future Enhancements
 

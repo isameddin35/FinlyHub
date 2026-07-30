@@ -97,14 +97,11 @@ JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRATION=86400000
 JWT_REFRESH_EXPIRATION=604800000
 
-# AI Provider (Groq for chat, Ollama for embeddings)
+# AI Provider (Groq for chat, ONNX in-JVM for embeddings)
 AI_PROVIDER=openai
 OPENAI_BASE_URL=https://api.groq.com/openai/v1
 OPENAI_API_KEY=${OPENAI_API_KEY}
 OPENAI_MODEL=llama-3.1-8b-instant
-OPENAI_EMBEDDING_MODEL=nomic-embed-text
-OPENAI_EMBEDDING_BASE_URL=http://ollama:11434/v1
-OPENAI_EMBEDDING_API_KEY=ollama
 
 # CORS
 APP_CORS_ALLOWED_ORIGINS=https://finlyhub.org,https://www.finlyhub.org,http://localhost:5173,http://localhost:3000
@@ -113,19 +110,61 @@ APP_CORS_ALLOWED_ORIGINS=https://finlyhub.org,https://www.finlyhub.org,http://lo
 VITE_API_URL=/api
 EOF
 
-# --- Start services ---
-log "Starting services with docker compose..."
+# --- Build images ---
+log "Building images..."
 cd "$PROJECT_DIR"
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml build backend frontend
 
-log "Waiting for services to become healthy..."
-sleep 10
+# --- Start postgres first (if not running) ---
+log "Ensuring postgres is running..."
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps postgres
 
-# Clean up qwen2:0.5b if it was partially pulled during a failed transition
-docker exec finlyhub-ollama ollama rm qwen2:0.5b 2>/dev/null && log "Cleaned up partial qwen2:0.5b pull" || true
+# --- Restart backend with zero-downtime ---
+log "Starting backend..."
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps backend
 
-RUNNING=$(docker compose ps --services --filter "status=running" | wc -l)
-TOTAL=$(docker compose ps --services | wc -l)
+log "Waiting for backend to become healthy..."
+BACKEND_HEALTHY=false
+for i in $(seq 1 30); do
+  STATUS=$(curl -sf http://localhost:8080/actuator/health 2>/dev/null || true)
+  if [ "$STATUS" = '{"status":"UP"}' ]; then
+    BACKEND_HEALTHY=true
+    log "Backend is healthy"
+    break
+  fi
+  log "Backend not ready yet (attempt $i/30)..."
+  sleep 5
+done
+
+if [ "$BACKEND_HEALTHY" = false ]; then
+  log "ERROR: Backend failed to start within 150s. Check logs with: docker compose logs backend"
+  docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps
+  exit 1
+fi
+
+# --- Restart frontend ---
+log "Starting frontend..."
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps frontend
+
+log "Waiting for frontend to become healthy..."
+FRONTEND_HEALTHY=false
+for i in $(seq 1 12); do
+  if wget -q --spider http://localhost:5173 2>/dev/null; then
+    FRONTEND_HEALTHY=true
+    log "Frontend is healthy"
+    break
+  fi
+  log "Frontend not ready yet (attempt $i/12)..."
+  sleep 5
+done
+
+if [ "$FRONTEND_HEALTHY" = false ]; then
+  log "WARNING: Frontend may not be serving traffic. Check logs with: docker compose logs frontend"
+fi
+
+# --- Final status ---
+TOTAL=$(docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps --services | wc -l)
+RUNNING=$(docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps --services --filter "status=running" | wc -l)
 log "Running $RUNNING/$TOTAL services"
 
 if [ "$RUNNING" -eq "$TOTAL" ]; then
@@ -133,5 +172,5 @@ if [ "$RUNNING" -eq "$TOTAL" ]; then
   log "Access the app at http://$(curl -s http://checkip.amazonaws.com)/"
 else
   log "Some services are not running. Check logs with: docker compose logs"
-  docker compose ps
+  docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps
 fi

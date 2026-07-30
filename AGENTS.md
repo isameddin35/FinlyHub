@@ -6,7 +6,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 
 **Target:** Investor demo with realistic mock data.
 
-**Status:** MVP — all features implemented, ~31+ bugs fixed, runs via `docker compose up`.
+**Status:** MVP — all features implemented, 50+ bugs fixed, runs via `docker compose up`.
 
 ---
 
@@ -24,8 +24,8 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 | Office | Apache POI | 5.3.0 |
 | AI (Mock) | MockAiService (built-in) | — |
 | AI (Groq Chat) | Groq via com.theokanning.openai-gpt3-java | 0.18.2 |
-| AI (Ollama Embeddings) | Ollama via com.theokanning.openai-gpt3-java | 0.18.2 |
-| Embedding dims | nomic-embed-text → 768-dim vectors | — |
+| AI (Embeddings) | ONNX Runtime + DJL Tokenizers (bge-small-en-v1.5) | in-JVM |
+| Embedding dims | bge-small-en-v1.5 → 384-dim vectors | — |
 | Frontend | React + TypeScript | 19 / 5.7 |
 | Bundler | Vite | 6 |
 | Styling | Tailwind CSS + shadcn/ui + Radix UI | 3.4 |
@@ -41,7 +41,7 @@ Finly Hub is an AI-powered accounting productivity platform. It processes invoic
 
 ```
 finlyhub/
-├── docker-compose.yml           # 4 services: postgres, backend, frontend, ollama
+├── docker-compose.yml           # 3 services: postgres, backend, frontend
 ├── .env                         # Shared env vars (DB, JWT, AI provider)
 ├── postgres/init.sql            # CREATE EXTENSION vector
 ├── uploads/                     # User-uploaded files (mounted volume)
@@ -52,7 +52,7 @@ finlyhub/
 │   └── src/main/java/com/finlyhub/
 │       ├── FinlyHubApplication.java
 │       ├── config/              # Security, CORS, JWT, Web, OpenAi, Health
-│       ├── common/              # AiService interface + impls, exceptions, DTOs, utils, bootstrap
+│       ├── common/              # AiService interface + impls, exceptions, DTOs, utils
 │       ├── auth/                # Register, login, refresh, JWT
 │       ├── user/                # Profile CRUD, roles
 │       ├── invoice/             # Upload → OCR → AI extraction → approval
@@ -94,7 +94,7 @@ finlyhub/
 - **Controllers**: Return `ResponseEntity<ApiResponse<T>>` using `ApiResponse.success()` / `ApiResponse.error()`.
 - **Services**: Inject via constructor (`@RequiredArgsConstructor`). Add `@Transactional(readOnly = true)` on read methods that access lazy associations.
 - **`@Lob` is banned.** Use `@Column(columnDefinition = "TEXT")` instead — `@Lob` forces CLOB/OID in PostgreSQL and causes `Bad value for type long` errors.
-- **Package structure**: `entity/`, `repository/`, `service/`, `controller/`, `dto/`, `mapper/` within each feature package. Bootstrap logic lives in `common/bootstrap/`.
+- **Package structure**: `entity/`, `repository/`, `service/`, `controller/`, `dto/`, `mapper/` within each feature package.
 
 ### Frontend (TypeScript/React)
 - **Named exports only.** No `export default` (except `App`).
@@ -118,7 +118,6 @@ finlyhub/
 - **Metadata / flexible data**: `JSONB`.
 - **IDs**: `BIGINT` for all FK columns.
 - **Seed data** uses `context: demo` to gate demo data. Always use `valueComputed` for FK references instead of hardcoded IDs.
-- **DemoAccountCloner** (`common/bootstrap/`, `@Profile("demo")`) clones admin data into 10 demo accounts (`demo01–demo10`) on startup — each demo user sees personalized invoices, transactions, conversations, documents, and reconciliations.
 
 ---
 
@@ -135,17 +134,18 @@ finlyhub/
 
 ## CI/CD Pipeline
 
-- **GitHub Actions** — `.github/workflows/deploy.yml` triggers on push to `main`
-- **Deploy**: Uses `aws-actions/configure-aws-credentials` to auth, then `aws ssm send-command` to run `deploy/deploy.sh` on EC2 (`docker compose up -d --build`)
+- **GitHub Actions** — CI runs on push (test backend + frontend), then deploy triggers on CI success
+- **Deploy**: Uses `aws-actions/configure-aws-credentials` to auth, then `aws ssm send-command` to run `deploy/deploy.sh` on EC2 (sequential `--no-deps` rebuild with health checks)
+- **Rollback**: `sudo bash deploy/rollback.sh` reverts to previous commit and rebuilds
 - **Secrets** stored in GitHub repo: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - **Secrets for production** (JWT, DB password) stored in AWS SSM Parameter Store, fetched by `deploy/deploy.sh`
 
 ## Testing
 
-- **No tests exist yet.** The project was built for a demo, not production.
+- **Backend tests** (JUnit 5 + Mockito) in `backend/src/test/java/`
+- **Frontend tests** (Vitest) in `frontend/src/api/__tests__/`
 - **Verification**: Run `docker compose up -d` and test endpoints via curl or the frontend.
 - **Demo users**: `admin@finlyhub.com`, `accountant@finlyhub.com`, `viewer@finlyhub.com` — all with password `password`.
-- **Hallway demo accounts**: `demo01@finlyhub.com` through `demo10@finlyhub.com` — automatically cloned from admin data by `DemoAccountCloner`.
 
 ---
 

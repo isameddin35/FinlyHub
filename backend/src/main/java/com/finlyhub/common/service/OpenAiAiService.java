@@ -1,5 +1,6 @@
 package com.finlyhub.common.service;
 
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.model.CategorizationResult;
 import com.finlyhub.common.model.ChatRequest;
 import com.finlyhub.common.model.ChatResponse;
@@ -10,15 +11,13 @@ import com.theokanning.openai.OpenAiApi;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.completion.chat.ChatMessageRole;
-import com.theokanning.openai.embedding.EmbeddingRequest;
 import com.theokanning.openai.service.OpenAiService;
-import io.reactivex.Flowable;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.HttpUrl;
 import okhttp3.Request;
-import org.springframework.beans.factory.annotation.Value;
+
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -32,27 +31,20 @@ import java.util.function.Consumer;
 public class OpenAiAiService implements AiService {
 
     private OpenAiService openAiService;
-    private OpenAiService embeddingOpenAiService;
+    private final OnnxBgeEmbeddingService onnxEmbeddingService;
     private final String apiKey;
     private final String baseUrl;
     private final String model;
-    private final String embeddingModel;
-    private final String embeddingBaseUrl;
-    private final String embeddingApiKey;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public OpenAiAiService(String baseUrl,
                             String apiKey,
-                            @Value("${ai.openai.model}") String model,
-                            @Value("${ai.openai.embedding-model}") String embeddingModel,
-                            @Value("${ai.openai.embedding-base-url}") String embeddingBaseUrl,
-                            @Value("${ai.openai.embedding-api-key}") String embeddingApiKey) {
+                            String model,
+                            OnnxBgeEmbeddingService onnxEmbeddingService) {
         this.baseUrl = baseUrl;
         this.apiKey = apiKey;
         this.model = model;
-        this.embeddingModel = embeddingModel;
-        this.embeddingBaseUrl = embeddingBaseUrl;
-        this.embeddingApiKey = embeddingApiKey;
+        this.onnxEmbeddingService = onnxEmbeddingService;
     }
 
     @PostConstruct
@@ -84,23 +76,6 @@ public class OpenAiAiService implements AiService {
 
         OpenAiApi api = retrofit.create(OpenAiApi.class);
         this.openAiService = new OpenAiService(api);
-
-        OkHttpClient embeddingClient = OpenAiService.defaultClient(embeddingApiKey, Duration.ofSeconds(30))
-                .newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ofSeconds(30))
-                .writeTimeout(Duration.ofSeconds(30))
-                .build();
-
-        Retrofit embeddingRetrofit = new Retrofit.Builder()
-                .baseUrl(embeddingBaseUrl.endsWith("/") ? embeddingBaseUrl : embeddingBaseUrl + "/")
-                .client(embeddingClient)
-                .addConverterFactory(JacksonConverterFactory.create(mapper))
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .build();
-
-        OpenAiApi embeddingApi = embeddingRetrofit.create(OpenAiApi.class);
-        this.embeddingOpenAiService = new OpenAiService(embeddingApi);
     }
 
     @Override
@@ -133,7 +108,7 @@ public class OpenAiAiService implements AiService {
             return parseExtractionResponse(response);
         } catch (Exception e) {
             log.error("AI extraction failed", e);
-            throw new RuntimeException("AI extraction failed: " + e.getMessage());
+            throw new BusinessException("AI extraction failed: " + e.getMessage());
         }
     }
 
@@ -145,7 +120,7 @@ public class OpenAiAiService implements AiService {
                 .model(model)
                 .messages(messages)
                 .temperature(0.3)
-                .maxTokens(1000)
+                .maxTokens(2048)
                 .build();
 
         try {
@@ -159,7 +134,7 @@ public class OpenAiAiService implements AiService {
                     .build();
         } catch (Exception e) {
             log.error("AI chat failed", e);
-            throw new RuntimeException("AI chat failed: " + e.getMessage());
+            throw new BusinessException("AI chat failed: " + e.getMessage());
         }
     }
 
@@ -171,7 +146,7 @@ public class OpenAiAiService implements AiService {
                 .model(model)
                 .messages(messages)
                 .temperature(0.3)
-                .maxTokens(1000)
+                .maxTokens(2048)
                 .stream(true)
                 .build();
 
@@ -188,7 +163,7 @@ public class OpenAiAiService implements AiService {
                     });
         } catch (Exception e) {
             log.error("AI chat stream failed", e);
-            throw new RuntimeException("AI chat stream failed: " + e.getMessage());
+            throw new BusinessException("AI chat stream failed: " + e.getMessage());
         }
 
         onComplete.run();
@@ -198,16 +173,27 @@ public class OpenAiAiService implements AiService {
         List<ChatMessage> messages = new ArrayList<>();
 
         StringBuilder systemPrompt = new StringBuilder("""
-                You are an expert accounting assistant. Answer questions based on the provided documentation.
-                Always cite your sources. If you don't know, say so.
+                You are an expert accounting assistant for FinlyHub. Answer the user's question based ONLY on the provided documentation chunks below.
+
+                Rules:
+                - Base your answer strictly on the provided context. Do not add information that is not in the sources.
+                - If the provided context does not contain enough information to answer, say "I don't have enough information in the uploaded documents to answer that."
+                - Cite which source(s) you used. Use the filename when referencing a source.
+                - Respond in the same language as the user's question.
+                - Format your answer clearly with headings, bullet points, or tables when helpful.
+                - Do not fabricate URLs, section numbers, or legal citations that are not in the provided text.
                 
-                Relevant documentation:
+                Provided document context:
                 """);
 
         if (request.getRelevantDocuments() != null) {
             for (SourceDocument doc : request.getRelevantDocuments()) {
                 systemPrompt.append("\n--- Source: ").append(doc.getFilename()).append(" ---\n");
-                systemPrompt.append(doc.getExcerpt()).append("\n");
+                String excerpt = doc.getExcerpt();
+                if (excerpt != null && excerpt.length() > 500) {
+                    excerpt = excerpt.substring(0, 500) + "...";
+                }
+                systemPrompt.append(excerpt).append("\n");
             }
         }
 
@@ -226,20 +212,21 @@ public class OpenAiAiService implements AiService {
 
     @Override
     public List<Float> generateEmbedding(String text) {
-        EmbeddingRequest request = EmbeddingRequest.builder()
-                .model(embeddingModel)
-                .input(List.of(text))
-                .build();
-
         try {
-            List<Double> doubles = embeddingOpenAiService.createEmbeddings(request)
-                    .getData().get(0).getEmbedding();
-            return doubles.stream()
-                    .map(Double::floatValue)
-                    .toList();
+            return onnxEmbeddingService.embed(text);
         } catch (Exception e) {
-            log.error("Embedding API failed, returning empty results", e);
+            log.error("ONNX embedding failed, returning empty results", e);
             return List.of();
+        }
+    }
+
+    @Override
+    public List<List<Float>> generateEmbeddings(List<String> texts) {
+        try {
+            return onnxEmbeddingService.embedBatch(texts);
+        } catch (Exception e) {
+            log.error("ONNX batch embedding failed, returning empty results", e);
+            return texts.stream().map(t -> List.<Float>of()).toList();
         }
     }
 

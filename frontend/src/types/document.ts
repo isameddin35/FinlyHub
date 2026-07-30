@@ -5,8 +5,10 @@ export interface Document {
   contentType: string
   fileSize: number
   documentType: string
-  status: 'UPLOADED' | 'INDEXED' | 'ERROR'
+  status: 'UPLOADED' | 'PROCESSING' | 'INDEXED' | 'ERROR'
   errorMessage?: string
+  totalChunks: number
+  indexedChunks: number
   createdAt: string
   updatedAt: string
 }

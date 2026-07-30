@@ -1,5 +1,6 @@
 package com.finlyhub.invoice.service;
 
+import com.finlyhub.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
@@ -46,7 +47,7 @@ public class OcrServiceImpl implements OcrService {
             }
             return extractTextFromImage(file);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to process PDF file", e);
+            throw new BusinessException("Failed to process PDF file");
         }
     }
 
@@ -60,7 +61,7 @@ public class OcrServiceImpl implements OcrService {
                 Files.deleteIfExists(tempFile);
             }
         } catch (IOException | TesseractException e) {
-            throw new RuntimeException("Failed to perform OCR on file", e);
+            throw new BusinessException("Failed to perform OCR on file");
         }
     }
 
@@ -81,7 +82,7 @@ public class OcrServiceImpl implements OcrService {
             }
             return tesseract.doOCR(Path.of(filePath).toFile());
         } catch (IOException | TesseractException e) {
-            throw new RuntimeException("Failed to perform OCR on file: " + filePath, e);
+            throw new BusinessException("Failed to perform OCR on file: " + filePath);
         }
     }
 }

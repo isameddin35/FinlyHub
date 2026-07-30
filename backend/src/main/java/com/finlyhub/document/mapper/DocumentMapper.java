@@ -20,6 +20,8 @@ public class DocumentMapper {
                 .documentType(document.getDocumentType())
                 .status(document.getStatus())
                 .errorMessage(document.getErrorMessage())
+                .totalChunks(document.getTotalChunks())
+                .indexedChunks(document.getIndexedChunks())
                 .createdAt(document.getCreatedAt())
                 .updatedAt(document.getUpdatedAt())
                 .build();

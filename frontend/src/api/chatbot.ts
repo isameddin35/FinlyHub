@@ -1,39 +1,22 @@
+import apiClient from './client'
 import type { ApiResponse } from '@/types/api'
 import type { ConversationResponse, MessageResponse, CreateConversationRequest, SendMessageRequest } from '@/types/chatbot'
 
-const API_BASE = '/api/chat'
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  const json = await response.json()
-  if (!response.ok || !json.success) {
-    throw new Error(json.message || 'Request failed')
-  }
-  return json.data as T
-}
-
 export const chatbotApi = {
   createConversation: async (data?: CreateConversationRequest) => {
-    const response = await fetch(`${API_BASE}/conversations`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-      body: JSON.stringify(data || {}),
-    })
-    return handleResponse<ConversationResponse>(response)
+    const res = await apiClient.post<ApiResponse<ConversationResponse>>('/chat/conversations', data || {})
+    return res.data.data
   },
 
   listConversations: async () => {
-    const res = await fetch(`${API_BASE}/conversations`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-    })
-    return handleResponse<ConversationResponse[]>(res)
+    const res = await apiClient.get<ApiResponse<ConversationResponse[]>>('/chat/conversations')
+    return res.data.data
   },
 
-  sendMessage: (conversationId: number, data: SendMessageRequest) =>
-    fetch(`${API_BASE}/conversations/${conversationId}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-      body: JSON.stringify(data),
-    }).then((r) => handleResponse<MessageResponse>(r)),
+  sendMessage: async (conversationId: number, data: SendMessageRequest) => {
+    const res = await apiClient.post<ApiResponse<MessageResponse>>(`/chat/conversations/${conversationId}/messages`, data)
+    return res.data.data
+  },
 
   streamMessage: (
     conversationId: number,
@@ -43,12 +26,14 @@ export const chatbotApi = {
     onError: (error: Error) => void,
   ): AbortController => {
     const abortController = new AbortController()
+    const baseUrl = apiClient.defaults.baseURL || '/api'
+    const token = localStorage.getItem('accessToken')
 
-    fetch(`${API_BASE}/conversations/${conversationId}/messages/stream`, {
+    fetch(`${baseUrl}/chat/conversations/${conversationId}/messages/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(data),
       signal: abortController.signal,
@@ -79,13 +64,13 @@ export const chatbotApi = {
           if (line.startsWith('event:')) {
             eventType = line[6] === ' ' ? line.slice(7).trim() : line.slice(6).trim()
           } else if (line.startsWith('data:')) {
-            const data = line[5] === ' ' ? line.slice(6) : line.slice(5)
+            const jsonData = line[5] === ' ' ? line.slice(6) : line.slice(5)
             if (eventType === 'token') {
-              onToken(data)
+              onToken(jsonData)
             } else if (eventType === 'done') {
               doneReceived = true
               try {
-                const parsed = JSON.parse(data)
+                const parsed = JSON.parse(jsonData)
                 onDone(parsed as MessageResponse)
               } catch {
                 onError(new Error('Failed to parse stream response'))
@@ -108,17 +93,12 @@ export const chatbotApi = {
   },
 
   getMessages: async (conversationId: number) => {
-    const res = await fetch(`${API_BASE}/conversations/${conversationId}/messages`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-    })
-    return handleResponse<MessageResponse[]>(res)
+    const res = await apiClient.get<ApiResponse<MessageResponse[]>>(`/chat/conversations/${conversationId}/messages`)
+    return res.data.data
   },
 
   deleteConversation: async (conversationId: number) => {
-    const res = await fetch(`${API_BASE}/conversations/${conversationId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-    })
-    return handleResponse<null>(res)
+    const res = await apiClient.delete<ApiResponse<null>>(`/chat/conversations/${conversationId}`)
+    return res.data.data
   },
 }

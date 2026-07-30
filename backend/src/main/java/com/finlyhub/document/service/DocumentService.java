@@ -1,7 +1,7 @@
 package com.finlyhub.document.service;
 
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
-import com.finlyhub.common.service.AiService;
 import com.finlyhub.common.util.SecurityUtils;
 import com.finlyhub.document.dto.DocumentUploadResponse;
 import com.finlyhub.document.entity.Document;
@@ -11,36 +11,32 @@ import com.finlyhub.document.repository.DocumentChunkRepository;
 import com.finlyhub.document.repository.DocumentRepository;
 import com.finlyhub.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final DocumentChunkRepository chunkRepository;
     private final DocumentMapper documentMapper;
-    private final DocumentParserService parserService;
-    private final AiService aiService;
-
-    @PersistenceContext
-    private EntityManager entityManager;
+    private final DocumentProcessingService documentProcessingService;
 
     @Value("${app.upload.dir:uploads}/documents")
     private String uploadDir;
@@ -68,76 +64,25 @@ public class DocumentService {
             document.setStatus(Document.DocumentStatus.UPLOADED);
             document = documentRepository.save(document);
 
-            document.setStatus(Document.DocumentStatus.PROCESSING);
-            documentRepository.save(document);
-
-            try {
-                String rawText = parserService.parseDocument(file);
-                document.setRawText(rawText);
-
-                List<String> chunks = parserService.chunkDocument(rawText);
-                List<DocumentChunk> chunkEntities = new ArrayList<>();
-
-                for (int i = 0; i < chunks.size(); i++) {
-                    String chunkText = chunks.get(i);
-                    int tokenCount = parserService.countTokens(chunkText);
-
-                    List<Float> embeddingVector = aiService.generateEmbedding(chunkText);
-                    String embeddingStr = embeddingVector.stream()
-                            .map(String::valueOf)
-                            .collect(Collectors.joining(","));
-
-                    DocumentChunk chunk = new DocumentChunk();
-                    chunk.setDocumentId(document.getId());
-                    chunk.setChunkIndex(i);
-                    chunk.setContent(chunkText);
-                    chunk.setTokenCount(tokenCount);
-                    chunk.setFilename(originalFilename);
-                    chunk.setEmbedding("[" + embeddingStr + "]");
-                    chunkEntities.add(chunk);
+            Long docId = document.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    documentProcessingService.processDocument(docId);
                 }
+            });
 
-                String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at) VALUES (?, ?, ?, ?, ?, cast(? as vector), NOW())";
-                for (DocumentChunk chunk : chunkEntities) {
-                    entityManager.createNativeQuery(insertSql)
-                            .setParameter(1, chunk.getDocumentId())
-                            .setParameter(2, chunk.getChunkIndex())
-                            .setParameter(3, chunk.getContent())
-                            .setParameter(4, chunk.getTokenCount())
-                            .setParameter(5, chunk.getFilename())
-                            .setParameter(6, chunk.getEmbedding())
-                            .executeUpdate();
-                }
-
-                document.setStatus(Document.DocumentStatus.INDEXED);
-                documentRepository.save(document);
-
-                return DocumentUploadResponse.builder()
-                        .id(document.getId())
-                        .filename(originalFilename)
-                        .contentType(file.getContentType())
-                        .fileSize(file.getSize())
-                        .status(Document.DocumentStatus.INDEXED)
-                        .message("Document uploaded and indexed successfully")
-                        .build();
-
-            } catch (Exception e) {
-                document.setStatus(Document.DocumentStatus.ERROR);
-                document.setErrorMessage(e.getMessage());
-                documentRepository.save(document);
-
-                return DocumentUploadResponse.builder()
-                        .id(document.getId())
-                        .filename(originalFilename)
-                        .contentType(file.getContentType())
-                        .fileSize(file.getSize())
-                        .status(Document.DocumentStatus.ERROR)
-                        .message("Document upload failed: " + e.getMessage())
-                        .build();
-            }
+            return DocumentUploadResponse.builder()
+                    .id(document.getId())
+                    .filename(originalFilename)
+                    .contentType(file.getContentType())
+                    .fileSize(file.getSize())
+                    .status(Document.DocumentStatus.UPLOADED)
+                    .message("Document uploaded successfully, processing in background")
+                    .build();
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file", e);
+            throw new BusinessException("Failed to store file");
         }
     }
 
@@ -168,7 +113,8 @@ public class DocumentService {
             if (document.getStoragePath() != null) {
                 Files.deleteIfExists(Paths.get(document.getStoragePath()));
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            log.error("Failed to delete file: {}", document.getStoragePath(), e);
         }
 
         documentRepository.delete(document);
@@ -182,5 +128,27 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public List<Document> findByUserIdAndStatus(Long userId, Document.DocumentStatus status) {
         return documentRepository.findByUserIdAndStatus(userId, status);
+    }
+
+    public void reprocessDocument(Long documentId) {
+        Document document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Document", documentId));
+
+        List<DocumentChunk> existingChunks = chunkRepository.findByDocumentId(documentId);
+        if (!existingChunks.isEmpty()) {
+            chunkRepository.deleteAll(existingChunks);
+        }
+
+        document.setStatus(Document.DocumentStatus.UPLOADED);
+        document.setErrorMessage(null);
+        document = documentRepository.save(document);
+
+        Long docId = document.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                documentProcessingService.processDocument(docId);
+            }
+        });
     }
 }

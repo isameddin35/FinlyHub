@@ -1,0 +1,96 @@
+databaseChangeLog:
+  - changeSet:
+      id: V017-1
+      author: finlyhub
+      comment: Drop existing embedding index before column type change
+      changes:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_chunks_embedding
+
+  - changeSet:
+      id: V017-2
+      author: finlyhub
+      comment: Delete all existing chunks (768-dim vectors incompatible with new 384-dim)
+      changes:
+        - delete:
+            tableName: document_chunks
+
+  - changeSet:
+      id: V017-3
+      author: finlyhub
+      comment: Change embedding column from vector(768) to vector(384) for bge-small-en-v1.5
+      changes:
+        - sql:
+            sql: ALTER TABLE document_chunks ALTER COLUMN embedding TYPE vector(384)
+
+  - changeSet:
+      id: V017-4
+      author: finlyhub
+      comment: Create new ivfflat index for 384-dim cosine similarity
+      changes:
+        - sql:
+            sql: CREATE INDEX idx_chunks_embedding ON document_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50)
+
+  - changeSet:
+      id: V017-5
+      author: finlyhub
+      context: demo
+      comment: Re-seed admin/accountant/viewer demo document chunks with 384-dim vectors
+      changes:
+        - sql:
+            sql: >
+              INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at)
+              VALUES
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf' LIMIT 1), 0,
+                 'Small Business Tax Deductions Guide 2026. Section 1: Home Office Deduction. Small business owners who use a portion of their home exclusively for business may qualify for the home office deduction. The simplified option allows $5 per square foot up to 300 square feet.',
+                 85, 'tax_policy_2026.pdf', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf' LIMIT 1), 1,
+                 'Section 2: Vehicle Expenses. Business owners can deduct vehicle expenses using either the standard mileage rate of 67 cents per mile or actual expense method. Section 3: Health Insurance Premiums. Self-employed individuals may deduct 100% of health insurance premiums for themselves and their dependents.',
+                 72, 'tax_policy_2026.pdf', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'tax_policy_2026.pdf' LIMIT 1), 2,
+                 'Additional deductions include retirement plan contributions (SEP IRA, Solo 401k), business equipment and software depreciation under Section 179, and education expenses directly related to your current business.',
+                 60, 'tax_policy_2026.pdf', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx' LIMIT 1), 0,
+                 'EU VAT Directive Summary 2026. Article 1: Standard VAT Rate. The standard VAT rate shall be at least 15% and applies to most goods and services. Article 2: Reduced Rates. Member states may apply one or two reduced rates of at least 5% to specific categories including food, water, pharmaceuticals, and medical equipment.',
+                 78, 'eu_vat_directive.docx', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx' LIMIT 1), 1,
+                 'Article 3: VAT on Digital Services. Digital services supplied to consumers are taxed in the member state of the consumer under the One Stop Shop (OSS) scheme. Article 4: Exemptions. Certain supplies including financial services, insurance, education, and healthcare are exempt from VAT.',
+                 68, 'eu_vat_directive.docx', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT id FROM documents WHERE original_filename = 'eu_vat_directive.docx' LIMIT 1), 2,
+                 'Cross-border transactions within the EU are generally exempt from VAT when supplied to a registered business (B2B) under the reverse charge mechanism. B2C cross-border digital services are taxed at the rate applicable in the customer''s country.',
+                 55, 'eu_vat_directive.docx', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW())
+
+  - changeSet:
+      id: V017-6
+      author: finlyhub
+      context: demo
+      comment: Re-seed accountant/viewer demo document chunks with 384-dim vectors
+      changes:
+        - sql:
+            sql: >
+              INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at)
+              VALUES
+                ((SELECT d.id FROM documents d JOIN users u ON d.user_id = u.id WHERE u.email = 'accountant@finlyhub.com' AND d.filename = 'gaap_accounting_standards.pdf' LIMIT 1), 0,
+                 'GAAP Accounting Standards Overview 2026. Section 1: Revenue Recognition. Revenue is recognized when control of goods or services is transferred to the customer at the transaction price. The five-step model includes identifying the contract, performance obligations, transaction price, allocation, and recognition.',
+                 50, 'gaap_accounting_standards.pdf', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT d.id FROM documents d JOIN users u ON d.user_id = u.id WHERE u.email = 'accountant@finlyhub.com' AND d.filename = 'gaap_accounting_standards.pdf' LIMIT 1), 1,
+                 'Section 2: Lease Accounting. Lessees must recognize right-of-use assets and lease liabilities for all leases longer than 12 months. Section 3: Inventory Valuation. Inventory is measured at the lower of cost or net realizable value. Common costing methods include FIFO, LIFO, and weighted average.',
+                 40, 'gaap_accounting_standards.pdf', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT d.id FROM documents d JOIN users u ON d.user_id = u.id WHERE u.email = 'accountant@finlyhub.com' AND d.filename = 'gaap_accounting_standards.pdf' LIMIT 1), 2,
+                 'Section 4: Intangible Assets. Intangible assets with finite lives are amortized over their useful life. Goodwill is tested annually for impairment.',
+                 20, 'gaap_accounting_standards.pdf', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT d.id FROM documents d JOIN users u ON d.user_id = u.id WHERE u.email = 'viewer@finlyhub.com' AND d.filename = 'quarterly_financial_guidelines.docx' LIMIT 1), 0,
+                 'Quarterly Financial Reporting Guidelines 2026. All reports must be submitted within 15 business days after quarter end. Each report should include an income statement, balance sheet, cash flow statement, and statement of retained earnings. Financial statements must comply with GAAP standards.',
+                 45, 'quarterly_financial_guidelines.docx', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW()),
+
+                ((SELECT d.id FROM documents d JOIN users u ON d.user_id = u.id WHERE u.email = 'viewer@finlyhub.com' AND d.filename = 'quarterly_financial_guidelines.docx' LIMIT 1), 1,
+                 'Key metrics to report include gross margin, operating margin, EBITDA, net income, and earnings per share. Variance analysis comparing actual results to budget and prior year is required for all material line items. Management discussion and analysis should explain significant trends and uncertainties.',
+                 40, 'quarterly_financial_guidelines.docx', (SELECT ('[' || string_agg((random() * 2 - 1)::text, ',') || ']')::vector FROM generate_series(1,384)), NOW())

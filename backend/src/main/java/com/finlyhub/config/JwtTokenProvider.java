@@ -51,19 +51,29 @@ public class JwtTokenProvider {
     }
 
     public Long getUserIdFromToken(String token) {
-        Claims claims = parseToken(token);
+        return getUserIdFromClaims(parseToken(token));
+    }
+
+    public Long getUserIdFromClaims(Claims claims) {
         return Long.parseLong(claims.getSubject());
     }
 
-    public String getEmailFromToken(String token) {
-        Claims claims = parseToken(token);
+    public String getEmailFromClaims(Claims claims) {
         return claims.get("email", String.class);
     }
 
     @SuppressWarnings("unchecked")
-    public List<String> getRolesFromToken(String token) {
-        Claims claims = parseToken(token);
+    public List<String> getRolesFromClaims(Claims claims) {
         return claims.get("roles", List.class);
+    }
+
+    public String getEmailFromToken(String token) {
+        return getEmailFromClaims(parseToken(token));
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> getRolesFromToken(String token) {
+        return getRolesFromClaims(parseToken(token));
     }
 
     public boolean validateToken(String token) {
@@ -73,6 +83,10 @@ public class JwtTokenProvider {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public Claims parseClaims(String token) {
+        return parseToken(token);
     }
 
     private Claims parseToken(String token) {

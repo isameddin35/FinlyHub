@@ -25,8 +25,9 @@ public class ReportController {
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<ReportResponse>> generateReport(@Valid @RequestBody ReportRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        ReportResponse response = reportService.generateReport(request, userId);
-        return ResponseEntity.ok(ApiResponse.success("Report generated successfully", response));
+        ReportResponse response = reportService.createReport(request, userId);
+        reportService.generateReportAsync(response.getId());
+        return ResponseEntity.ok(ApiResponse.success("Report generation started", response));
     }
 
     @GetMapping

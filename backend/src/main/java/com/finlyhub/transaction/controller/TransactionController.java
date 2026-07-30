@@ -8,6 +8,7 @@ import com.finlyhub.transaction.mapper.TransactionMapper;
 import com.finlyhub.transaction.repository.TransactionCategoryRepository;
 import com.finlyhub.transaction.service.TransactionCategorizationService;
 import com.finlyhub.transaction.service.TransactionImportService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -95,7 +96,7 @@ public class TransactionController {
     @PutMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<TransactionResponse>> approveCategory(
             @PathVariable Long id,
-            @RequestBody TransactionCategorizeRequest request) {
+            @Valid @RequestBody TransactionCategorizeRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         if (userId == null) {
             return ResponseEntity.badRequest().body(ApiResponse.error("User not authenticated"));

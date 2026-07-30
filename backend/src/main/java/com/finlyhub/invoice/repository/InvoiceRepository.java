@@ -18,4 +18,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     List<Invoice> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     Page<Invoice> findByUserId(Long userId, Pageable pageable);
+
+    Page<Invoice> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    long countByUserId(Long userId);
 }

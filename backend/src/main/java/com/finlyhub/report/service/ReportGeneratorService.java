@@ -3,6 +3,7 @@ package com.finlyhub.report.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
 import com.finlyhub.common.model.ChatRequest;
 import com.finlyhub.common.service.AiService;
@@ -27,6 +28,7 @@ import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,8 +49,7 @@ public class ReportGeneratorService {
     private final AiService aiService;
     private final ObjectMapper objectMapper;
 
-    @Transactional
-    public ReportResponse generateReport(ReportRequest request, Long userId) {
+    public ReportResponse createReport(ReportRequest request, Long userId) {
         Report report = new Report();
         User userRef = new User();
         userRef.setId(userId);
@@ -70,16 +71,32 @@ public class ReportGeneratorService {
             try {
                 report.setParameters(objectMapper.writeValueAsString(request.getParameters()));
             } catch (JsonProcessingException e) {
-                throw new RuntimeException("Failed to serialize parameters", e);
+                throw new BusinessException("Failed to serialize parameters");
             }
         }
 
         report = reportRepository.save(report);
+        return toResponse(report);
+    }
+
+    @Async("reportGenerationExecutor")
+    @Transactional
+    public void generateReportAsync(Long reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResourceNotFoundException("Report", reportId));
 
         try {
-            LocalDate start = request.getPeriodStart() != null ? request.getPeriodStart() : LocalDate.of(2000, 1, 1);
-            LocalDate end = request.getPeriodEnd() != null ? request.getPeriodEnd() : LocalDate.now();
-            List<Transaction> transactions = transactionRepository.findByUserIdAndTransactionDateBetween(userId, start, end);
+            ReportRequest request = ReportRequest.builder()
+                    .type(report.getType())
+                    .subtype(report.getSubtype())
+                    .periodStart(report.getPeriodStart())
+                    .periodEnd(report.getPeriodEnd())
+                    .build();
+
+            LocalDate start = report.getPeriodStart() != null ? report.getPeriodStart() : LocalDate.of(2000, 1, 1);
+            LocalDate end = report.getPeriodEnd() != null ? report.getPeriodEnd() : LocalDate.now();
+            List<Transaction> transactions = transactionRepository.findByUserIdAndTransactionDateBetween(
+                    report.getUser().getId(), start, end);
 
             Map<String, Object> reportData = aggregateData(transactions, request);
             String aiInsights = generateAiInsights(reportData, request);
@@ -89,14 +106,12 @@ public class ReportGeneratorService {
             report.setAiInsights(aiInsights);
             report.setChartConfig(objectMapper.writeValueAsString(chartConfig));
             report.setStatus(ReportStatus.COMPLETED);
-            report = reportRepository.save(report);
+            reportRepository.save(report);
         } catch (Exception e) {
             report.setStatus(ReportStatus.FAILED);
             reportRepository.save(report);
-            throw new RuntimeException("Failed to generate report", e);
+            throw new BusinessException("Failed to generate report");
         }
-
-        return toResponse(report);
     }
 
     public List<ReportSummaryResponse> getReportsByUser(Long userId) {
@@ -311,7 +326,7 @@ public class ReportGeneratorService {
                         new TypeReference<Map<String, Object>>() {}));
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to parse report data", e);
+            throw new BusinessException("Failed to parse report data");
         }
 
         return builder.build();
@@ -375,7 +390,7 @@ public class ReportGeneratorService {
             document.save(baos);
             return baos.toByteArray();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to generate PDF", e);
+            throw new BusinessException("Failed to generate PDF");
         }
     }
 
@@ -420,7 +435,7 @@ public class ReportGeneratorService {
             workbook.write(baos);
             return baos.toByteArray();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to generate Excel", e);
+            throw new BusinessException("Failed to generate Excel");
         }
     }
 }

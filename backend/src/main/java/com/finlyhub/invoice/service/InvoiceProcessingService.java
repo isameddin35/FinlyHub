@@ -2,6 +2,7 @@ package com.finlyhub.invoice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
 import com.finlyhub.common.model.ExtractionResult;
 import com.finlyhub.common.service.AiService;
@@ -47,7 +48,6 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class InvoiceProcessingService {
 
     private final InvoiceRepository invoiceRepository;
@@ -66,6 +66,7 @@ public class InvoiceProcessingService {
     @Value("${app.upload.dir:uploads}/invoices")
     private String uploadDir;
 
+    @Transactional
     public InvoiceUploadResponse initiateProcessing(MultipartFile file, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
@@ -84,7 +85,7 @@ public class InvoiceProcessingService {
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
             filePath = targetPath.toString();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to save uploaded file", e);
+            throw new BusinessException("Failed to save uploaded file");
         }
 
         Document document = new Document();
@@ -115,6 +116,7 @@ public class InvoiceProcessingService {
     }
 
     @Async("invoiceProcessingExecutor")
+    @Transactional
     public void runProcessing(Long invoiceId, String filePath) {
         Instant start = Instant.now();
 
@@ -290,7 +292,7 @@ public class InvoiceProcessingService {
                 latestExtraction.setCorrectedData(objectMapper.writeValueAsString(corrections));
                 extractionRepository.save(latestExtraction);
             } catch (JsonProcessingException e) {
-                throw new RuntimeException("Failed to serialize correction data", e);
+                throw new BusinessException("Failed to serialize correction data");
             }
         }
 

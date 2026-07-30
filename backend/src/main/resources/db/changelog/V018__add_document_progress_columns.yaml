@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: V018-1
+      author: finlyhub
+      changes:
+        - addColumn:
+            tableName: documents
+            columns:
+              - column:
+                  name: total_chunks
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: indexed_chunks
+                  type: INTEGER
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

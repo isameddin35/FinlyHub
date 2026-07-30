@@ -2,7 +2,9 @@ package com.finlyhub.config;
 
 import com.finlyhub.common.service.AiService;
 import com.finlyhub.common.service.MockAiService;
+import com.finlyhub.common.service.OnnxBgeEmbeddingService;
 import com.finlyhub.common.service.OpenAiAiService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -20,19 +22,17 @@ public class OpenAiConfig {
     @Value("${ai.openai.model}")
     private String model;
 
-    @Value("${ai.openai.embedding-model}")
-    private String embeddingModel;
-
-    @Value("${ai.openai.embedding-base-url}")
-    private String embeddingBaseUrl;
-
-    @Value("${ai.openai.embedding-api-key}")
-    private String embeddingApiKey;
+    @Autowired(required = false)
+    private OnnxBgeEmbeddingService onnxEmbeddingService;
 
     @Bean
     @ConditionalOnProperty(name = "ai.provider", havingValue = "openai")
     public AiService openAiService() {
-        return new OpenAiAiService(baseUrl, apiKey, model, embeddingModel, embeddingBaseUrl, embeddingApiKey);
+        if (onnxEmbeddingService == null) {
+            throw new IllegalStateException(
+                "OnnxBgeEmbeddingService not available. Ensure ONNX model files are accessible.");
+        }
+        return new OpenAiAiService(baseUrl, apiKey, model, onnxEmbeddingService);
     }
 
     @Bean

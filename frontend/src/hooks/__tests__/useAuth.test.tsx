@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { AuthProvider, useAuth } from '@/hooks/useAuth'
 import { authApi } from '@/api/auth'
+import { mockApiResponse } from '@/api/__tests__/test-utils'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/auth', () => ({
@@ -45,18 +46,13 @@ describe('useAuth', () => {
   it('login stores tokens and user data', async () => {
     const userData = { id: 1, email: 'a@b.com', firstName: 'A', lastName: 'B', fullName: 'A B', company: '', avatarUrl: null, emailVerified: false, roles: ['VIEWER'], createdAt: '2026-01-01T00:00:00' }
     const mockLogin = vi.mocked(authApi.login)
-    mockLogin.mockResolvedValue({
-      data: {
-        success: true,
-        data: {
-          accessToken: 'atoken',
-          refreshToken: 'rtoken',
-          tokenType: 'Bearer',
-          expiresIn: 86400000,
-          user: userData,
-        },
-      },
-    } as any)
+    mockLogin.mockResolvedValue(mockApiResponse({
+      accessToken: 'atoken',
+      refreshToken: 'rtoken',
+      tokenType: 'Bearer',
+      expiresIn: 86400000,
+      user: userData,
+    }))
 
     const { result } = renderHook(() => useAuth(), { wrapper })
 
@@ -90,18 +86,13 @@ describe('useAuth', () => {
   it('register stores tokens and user data', async () => {
     const userData = { id: 2, email: 'new@b.com', firstName: 'New', lastName: 'User', fullName: 'New User', company: '', avatarUrl: null, emailVerified: false, roles: ['VIEWER'], createdAt: '2026-01-01T00:00:00' }
     const mockRegister = vi.mocked(authApi.register)
-    mockRegister.mockResolvedValue({
-      data: {
-        success: true,
-        data: {
-          accessToken: 'atoken2',
-          refreshToken: 'rtoken2',
-          tokenType: 'Bearer',
-          expiresIn: 86400000,
-          user: userData,
-        },
-      },
-    } as any)
+    mockRegister.mockResolvedValue(mockApiResponse({
+      accessToken: 'atoken2',
+      refreshToken: 'rtoken2',
+      tokenType: 'Bearer',
+      expiresIn: 86400000,
+      user: userData,
+    }))
 
     const { result } = renderHook(() => useAuth(), { wrapper })
 
