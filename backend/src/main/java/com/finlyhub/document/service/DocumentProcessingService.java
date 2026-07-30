@@ -60,6 +60,7 @@ public class DocumentProcessingService {
                 transactionTemplate.execute(status -> {
                     Document doc = documentRepository.findById(documentId).orElse(null);
                     if (doc != null) {
+                        doc.setRawText(rawText);
                         doc.setStatus(Document.DocumentStatus.INDEXED);
                         documentRepository.save(doc);
                     }
@@ -72,6 +73,7 @@ public class DocumentProcessingService {
             transactionTemplate.execute(status -> {
                 Document doc = documentRepository.findById(documentId).orElse(null);
                 if (doc != null) {
+                    doc.setRawText(rawText);
                     doc.setStatus(Document.DocumentStatus.PROCESSING);
                     doc.setTotalChunks(chunks.size());
                     doc.setIndexedChunks(0);
