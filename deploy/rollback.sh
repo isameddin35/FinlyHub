@@ -26,7 +26,7 @@ fi
 
 log "Rebuilding and restarting services..."
 docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml build backend frontend
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps backend
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps --remove-orphans backend
 
 log "Waiting for backend to become healthy..."
 for i in $(seq 1 30); do
@@ -38,7 +38,7 @@ for i in $(seq 1 30); do
   sleep 5
 done
 
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps frontend
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps --remove-orphans frontend
 
 log "Rollback complete!"
 docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps
