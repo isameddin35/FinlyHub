@@ -1,6 +1,6 @@
 # Finly Hub — AI-Powered Accounting Platform
 
-Modern, enterprise-grade SaaS platform that helps accountants automate repetitive tasks while maintaining full human oversight.
+Modern, enterprise-grade SaaS platform that helps accountants and finance teams automate repetitive tasks while maintaining full human oversight.
 
 ## Features
 
