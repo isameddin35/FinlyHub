@@ -48,7 +48,7 @@ const CSS = `
   -webkit-mask-image:radial-gradient(ellipse 100% 90% at 50% 20%, #000 20%, transparent 82%);
 }
 
-.fh-orb{ position:fixed; border-radius:50%; filter:blur(80px); z-index:-2; pointer-events:none; opacity:0.5; }
+.fh-orb{ position:fixed; border-radius:50%; z-index:-2; pointer-events:none; opacity:0.5; }
 .fh-orb-blue{
   width:560px;height:560px; top:-160px; left:-120px;
   background:radial-gradient(circle at 40% 40%, rgba(37,99,235,0.32), rgba(37,99,235,0) 70%);
@@ -669,9 +669,15 @@ const CSS = `
   .fh-hero{ padding:80px 0 64px; }
   .fh-cards{ gap:18px; }
   .fh-card{ width:100%; max-width:400px; }
-  .fh-orb{ opacity:0.32; }
+  .fh-orb{ opacity:0.32; animation:none; }
   .fh-value-props{ padding:64px 0; }
   .fh-cta-section{ padding:40px 0 80px; }
+  .fh-card, .fh-value-card, .fh-float-widget{
+    -webkit-backdrop-filter:none; backdrop-filter:none;
+    background:rgba(255,255,255,0.92);
+  }
+  .fh-logotype .fh-word.fh-accent-word.fh-landed .fh-letter{ animation:none; }
+  .fh-scroll-hint .fh-label{ animation:none; }
 }
 .fh-root a:focus-visible, .fh-root .fh-card:focus-visible{ outline:2px solid var(--blue); outline-offset:4px; }
 
@@ -759,7 +765,7 @@ function Shattered({ text, id, accent, wordRef }: {
 
 
 
-function LazyVideo({ src, poster }: { src: string; poster: string }) {
+function LazyVideo({ src, poster, mobileSrc }: { src: string; poster: string; mobileSrc?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -783,6 +789,7 @@ function LazyVideo({ src, poster }: { src: string; poster: string }) {
     <div ref={ref}>
       {visible ? (
         <video autoPlay muted loop playsInline poster={poster}>
+          {mobileSrc && <source src={mobileSrc} type="video/mp4" media="(max-width: 760px)" />}
           <source src={src} type="video/mp4" />
         </video>
       ) : (
@@ -940,18 +947,22 @@ export function FinlyHubLanding() {
   }, []);
 
   /* ---------- Traveling data packets ---------- */
+  const packetIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     const layer = packetLayerRef.current;
     if (!layer) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) return;
 
+    const isMobile = window.matchMedia("(max-width: 760px)").matches;
+    const initialCount = isMobile ? 2 : 5;
+    const cadenceMs = isMobile ? 2200 : 900;
     const GRID = 52;
     let cols = Math.ceil(window.innerWidth / GRID);
     let rows = Math.ceil(window.innerHeight / GRID);
 
     function spawnPacket() {
-      if (!layer) return;
+      if (document.hidden || !layer) return;
       const horizontal = Math.random() > 0.5;
       const p = document.createElement("div");
       p.className = "fh-packet " + (horizontal ? "h" : "v");
@@ -971,32 +982,55 @@ export function FinlyHubLanding() {
     }
 
     const timers: ReturnType<typeof setTimeout>[] = [];
-    for (let i = 0; i < 5; i++) timers.push(setTimeout(spawnPacket, i * 500));
-    const interval = setInterval(spawnPacket, 900);
+    for (let i = 0; i < initialCount; i++) timers.push(setTimeout(spawnPacket, i * 500));
+    packetIntervalRef.current = setInterval(spawnPacket, cadenceMs);
     return () => {
       timers.forEach(clearTimeout);
-      clearInterval(interval);
+      if (packetIntervalRef.current) clearInterval(packetIntervalRef.current);
+      packetIntervalRef.current = null;
     };
   }, []);
 
-  /* ---------- Pause off-screen videos ---------- */
+  /* ---------- Pause off-screen videos; only one plays at a time ---------- */
+  const videosRef = useRef<HTMLVideoElement[]>([]);
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    const vids = root.querySelectorAll(".fh-video-card video");
+    const vids = Array.from(root.querySelectorAll(".fh-video-card video")) as HTMLVideoElement[];
+    videosRef.current = vids;
     const vio = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          const v = entry.target;
-          const video = v as HTMLVideoElement;
-          if (entry.isIntersecting) video.play().catch(() => {});
-          else video.pause();
+          const video = entry.target as HTMLVideoElement;
+          if (entry.isIntersecting) {
+            vids.forEach((v) => { if (v !== video) v.pause(); });
+            video.play().catch(() => {});
+          } else {
+            video.pause();
+          }
         });
       },
       { threshold: 0.25 }
     );
     vids.forEach((v) => vio.observe(v));
     return () => vio.disconnect();
+  }, []);
+
+  /* ---------- Pause everything when tab hidden ---------- */
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) {
+        videosRef.current.forEach((v) => v.pause());
+      } else {
+        const visible = Array.from(document.querySelectorAll(".fh-video-card video")) as HTMLVideoElement[];
+        visible.forEach((v) => {
+          const r = v.getBoundingClientRect();
+          if (r.top < window.innerHeight && r.bottom > 0) v.play().catch(() => {});
+        });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
   /* ---------- Close login overlay on Escape ---------- */
@@ -1055,6 +1089,7 @@ export function FinlyHubLanding() {
           <div className="fh-video-row">
             <div className="fh-video-card">
               <video autoPlay muted loop playsInline poster="assets/clip-1-poster.jpg">
+                <source src="assets/clip-1-mobile.mp4" type="video/mp4" media="(max-width: 760px)" />
                 <source src="assets/clip-1-scan.mp4" type="video/mp4" />
               </video>
               <div className="fh-video-overlay" />
@@ -1065,7 +1100,7 @@ export function FinlyHubLanding() {
             </div>
 
             <div className="fh-video-card">
-              <LazyVideo src="assets/clip-2-dashboard.mp4" poster="assets/clip-2-poster.jpg" />
+              <LazyVideo src="assets/clip-2-dashboard.mp4" mobileSrc="assets/clip-2-mobile.mp4" poster="assets/clip-2-poster.jpg" />
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
                 <span className="fh-live-dot" />
@@ -1074,7 +1109,7 @@ export function FinlyHubLanding() {
             </div>
 
             <div className="fh-video-card">
-              <LazyVideo src="assets/clip-3-approved.mp4" poster="assets/clip-3-poster.jpg" />
+              <LazyVideo src="assets/clip-3-approved.mp4" mobileSrc="assets/clip-3-mobile.mp4" poster="assets/clip-3-poster.jpg" />
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
                 <span className="fh-live-dot" />
