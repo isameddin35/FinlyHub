@@ -30,8 +30,7 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --n
 
 log "Waiting for backend to become healthy..."
 for i in $(seq 1 30); do
-  STATUS=$(curl -sf http://localhost:8080/actuator/health 2>/dev/null || true)
-  if [ "$STATUS" = '{"status":"UP"}' ]; then
+  if curl -sf http://localhost:8080/actuator/health >/dev/null 2>&1; then
     log "Backend is healthy"
     break
   fi
