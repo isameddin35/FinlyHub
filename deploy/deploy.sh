@@ -117,11 +117,11 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml build bac
 
 # --- Start postgres first (if not running) ---
 log "Ensuring postgres is running..."
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps postgres
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps --remove-orphans postgres
 
 # --- Restart backend with zero-downtime ---
 log "Starting backend..."
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps backend
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps --remove-orphans backend
 
 log "Waiting for backend to become healthy..."
 BACKEND_HEALTHY=false
@@ -143,7 +143,7 @@ fi
 
 # --- Restart frontend ---
 log "Starting frontend..."
-docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps frontend
+docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d --no-deps --remove-orphans frontend
 
 log "Waiting for frontend to become healthy..."
 FRONTEND_HEALTHY=false

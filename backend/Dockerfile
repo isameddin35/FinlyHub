@@ -3,6 +3,7 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:resolve -B
 COPY src ./src
+ENV MAVEN_OPTS="-Xmx1g"
 RUN mvn package -DskipTests -B
 
 FROM eclipse-temurin:21-jre-jammy
