@@ -103,9 +103,9 @@ class ChatbotControllerTest {
                 .confidenceScore(0.95)
                 .build();
 
-        when(chatbotService.sendMessage(eq(1L), any(), eq("Hello"))).thenReturn(response);
+        when(chatbotService.sendMessage(eq(1L), any(), eq("Hello"), isNull())).thenReturn(response);
 
-        SendMessageRequest request = new SendMessageRequest("Hello");
+        SendMessageRequest request = SendMessageRequest.builder().message("Hello").build();
 
         mockMvc.perform(post("/api/chat/conversations/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -117,7 +117,7 @@ class ChatbotControllerTest {
 
     @Test
     void sendMessage_EmptyMessage_ReturnsBadRequest() throws Exception {
-        SendMessageRequest request = new SendMessageRequest("");
+        SendMessageRequest request = SendMessageRequest.builder().message("").build();
 
         mockMvc.perform(post("/api/chat/conversations/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -147,4 +147,31 @@ describe('FinlyHubAssistant', () => {
       expect(screen.queryByText('No documents matched your question — answering from general knowledge')).toBeNull()
     })
   })
+
+  it('passes selected document type filter to streamMessage', async () => {
+    const conv = mockConv()
+    vi.mocked(chatbotApi.listConversations).mockResolvedValue([conv])
+    vi.mocked(chatbotApi.getMessages).mockResolvedValue([])
+    vi.mocked(chatbotApi.streamMessage).mockImplementation((_id, _data, _onToken, onDone) => {
+      onDone(mockMessage({ id: 2, role: 'assistant', content: 'Ok.' }))
+      return { abort: vi.fn() } as any
+    })
+    renderWithQuery(<FinlyHubAssistant />)
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Review')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Q1 Review'))
+    const select = screen.getByLabelText('Filter by document type') as HTMLSelectElement
+    await userEvent.selectOptions(select, 'INVOICE')
+    await userEvent.type(screen.getByPlaceholderText('Ask a question about your finances...'), 'how are invoices handled{enter}')
+    await waitFor(() => {
+      expect(chatbotApi.streamMessage).toHaveBeenCalledWith(
+        1,
+        { message: 'how are invoices handled', documentType: 'INVOICE' },
+        expect.any(Function),
+        expect.any(Function),
+        expect.any(Function),
+      )
+    })
+  })
 })

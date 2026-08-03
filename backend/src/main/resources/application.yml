@@ -42,6 +42,8 @@ ai:
   provider: ${AI_PROVIDER:mock}
   retrieval:
     min-similarity: ${AI_RETRIEVAL_MIN_SIMILARITY:0.4}
+    mmr-lambda: ${AI_RETRIEVAL_MMR_LAMBDA:0.7}
+    reindex-on-startup: ${AI_REINDEX_ON_STARTUP:false}
   openai:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     api-key: ${OPENAI_API_KEY:}

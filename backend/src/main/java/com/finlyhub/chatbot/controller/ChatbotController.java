@@ -6,8 +6,11 @@ import com.finlyhub.chatbot.dto.MessageResponse;
 import com.finlyhub.chatbot.dto.SendMessageRequest;
 import com.finlyhub.chatbot.entity.Conversation;
 import com.finlyhub.chatbot.service.ChatbotService;
+import com.finlyhub.chatbot.service.RetrievalFilter;
 import com.finlyhub.common.dto.ApiResponse;
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.util.SecurityUtils;
+import com.finlyhub.document.entity.Document;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -53,7 +56,7 @@ public class ChatbotController {
             @PathVariable Long id,
             @Valid @RequestBody SendMessageRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        MessageResponse response = chatbotService.sendMessage(id, userId, request.getMessage());
+        MessageResponse response = chatbotService.sendMessage(id, userId, request.getMessage(), toFilter(request));
         return ResponseEntity.ok(ApiResponse.success("Message sent", response));
     }
 
@@ -62,7 +65,7 @@ public class ChatbotController {
             @PathVariable Long id,
             @Valid @RequestBody SendMessageRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
-        return chatbotService.streamMessage(id, userId, request.getMessage());
+        return chatbotService.streamMessage(id, userId, request.getMessage(), toFilter(request));
     }
 
     @GetMapping("/conversations/{id}/messages")
@@ -75,5 +78,27 @@ public class ChatbotController {
     public ResponseEntity<ApiResponse<Void>> deleteConversation(@PathVariable Long id) {
         chatbotService.deleteConversation(id);
         return ResponseEntity.ok(ApiResponse.success("Conversation deleted", null));
+    }
+
+    private RetrievalFilter toFilter(SendMessageRequest request) {
+        String documentType = request.getDocumentType();
+        if (documentType != null && !documentType.isBlank()) {
+            boolean valid = false;
+            for (Document.DocumentType type : Document.DocumentType.values()) {
+                if (type.name().equalsIgnoreCase(documentType)) {
+                    valid = true;
+                    break;
+                }
+            }
+            if (!valid) {
+                throw new BusinessException("Invalid document type: " + documentType
+                        + ". Allowed values: INVOICE, POLICY, GUIDELINE, OTHER");
+            }
+            documentType = documentType.toUpperCase();
+        }
+        if (request.getFromDate() == null && request.getToDate() == null && documentType == null) {
+            return null;
+        }
+        return new RetrievalFilter(documentType, request.getFromDate(), request.getToDate());
     }
 }
