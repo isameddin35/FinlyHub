@@ -40,6 +40,8 @@ app:
 
 ai:
   provider: ${AI_PROVIDER:mock}
+  retrieval:
+    min-similarity: ${AI_RETRIEVAL_MIN_SIMILARITY:0.4}
   openai:
     base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
     api-key: ${OPENAI_API_KEY:}

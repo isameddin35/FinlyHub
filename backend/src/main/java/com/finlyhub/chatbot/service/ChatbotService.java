@@ -21,12 +21,16 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -36,10 +40,17 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ChatbotService {
 
+    private static final String BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: ";
+    private static final int RETRIEVAL_TOP_K = 5;
+    private static final double RRF_K = 60.0;
+
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final AiService aiService;
     private final ObjectMapper objectMapper;
+
+    @Value("${ai.retrieval.min-similarity:0.4}")
+    private double minSimilarity;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -195,7 +206,33 @@ public class ChatbotService {
 
     private List<SourceDocument> searchRelevantDocuments(Long userId, String query) {
         try {
-            List<Float> embedding = aiService.generateEmbedding(query);
+            List<SourceDocument> results = new ArrayList<>();
+
+            List<Object[]> vectorResults = vectorSearch(userId, query);
+            List<Object[]> keywordResults = keywordSearch(userId, query);
+
+            if (vectorResults.isEmpty() && keywordResults.isEmpty()) {
+                return results;
+            }
+
+            Map<Long, RankedChunk> ranked = new LinkedHashMap<>();
+            accumulateRanked(vectorResults, ranked);
+            accumulateRanked(keywordResults, ranked);
+
+            ranked.values().stream()
+                    .sorted(Comparator.comparingDouble(RankedChunk::getRrfScore).reversed())
+                    .limit(RETRIEVAL_TOP_K)
+                    .forEach(hit -> results.add(hit.toSource()));
+            return results;
+        } catch (Exception e) {
+            log.warn("Vector search failed, returning empty results", e);
+            return List.of();
+        }
+    }
+
+    private List<Object[]> vectorSearch(Long userId, String query) {
+        try {
+            List<Float> embedding = aiService.generateEmbedding(BGE_QUERY_PREFIX + query);
             if (embedding == null || embedding.isEmpty()) {
                 return List.of();
             }
@@ -204,33 +241,94 @@ public class ChatbotService {
                     .map(String::valueOf)
                     .collect(Collectors.joining(",", "[", "]"));
 
+            double maxDistance = 1.0 - minSimilarity;
+
             String sql = "SELECT c.id, c.document_id, c.chunk_index, c.content, c.filename, "
                        + "1 - (c.embedding <=> cast(:embedding as vector)) AS similarity "
                        + "FROM document_chunks c "
                        + "JOIN documents d ON c.document_id = d.id "
                        + "WHERE d.user_id = :userId "
-                       + "ORDER BY c.embedding <=> cast(:embedding as vector) LIMIT 5";
+                       + "AND (c.embedding <=> cast(:embedding as vector)) <= :maxDistance "
+                       + "ORDER BY c.embedding <=> cast(:embedding as vector) LIMIT " + RETRIEVAL_TOP_K;
 
-            List<Object[]> results = entityManager.createNativeQuery(sql)
+            return entityManager.createNativeQuery(sql)
                     .setParameter("embedding", embeddingStr)
                     .setParameter("userId", userId)
+                    .setParameter("maxDistance", maxDistance)
                     .getResultList();
-
-            List<SourceDocument> docs = new ArrayList<>();
-            for (Object[] row : results) {
-                SourceDocument doc = SourceDocument.builder()
-                        .documentId(row[1] != null ? ((Number) row[1]).longValue() : null)
-                        .chunkIndex(row[2] != null ? ((Number) row[2]).intValue() : null)
-                        .excerpt(truncateExcerpt(row[3] != null ? (String) row[3] : null))
-                        .filename(row[4] != null ? (String) row[4] : null)
-                        .relevanceScore(row[5] != null ? ((Number) row[5]).doubleValue() : null)
-                        .build();
-                docs.add(doc);
-            }
-            return docs;
         } catch (Exception e) {
-            log.warn("Vector search failed, returning empty results", e);
+            log.warn("Vector search query failed", e);
             return List.of();
+        }
+    }
+
+    private List<Object[]> keywordSearch(Long userId, String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        try {
+            String tsQuery = "SELECT c.id, c.document_id, c.chunk_index, c.content, c.filename, "
+                           + "ts_rank(c.search_vector, websearch_to_tsquery(:query)) AS similarity "
+                           + "FROM document_chunks c "
+                           + "JOIN documents d ON c.document_id = d.id "
+                           + "WHERE d.user_id = :userId "
+                           + "AND c.search_vector @@ websearch_to_tsquery(:query) "
+                           + "ORDER BY similarity DESC LIMIT 5";
+
+            return entityManager.createNativeQuery(tsQuery)
+                    .setParameter("userId", userId)
+                    .setParameter("query", query)
+                    .getResultList();
+        } catch (Exception e) {
+            log.warn("Keyword search query failed", e);
+            return List.of();
+        }
+    }
+
+    private void accumulateRanked(List<Object[]> rows, Map<Long, RankedChunk> ranked) {
+        for (int i = 0; i < rows.size(); i++) {
+            Object[] row = rows.get(i);
+            Long chunkId = ((Number) row[0]).longValue();
+            RankedChunk hit = ranked.computeIfAbsent(chunkId, k -> new RankedChunk(row));
+            hit.addScore(i, row);
+        }
+    }
+
+    private static class RankedChunk {
+        private final Long documentId;
+        private final Integer chunkIndex;
+        private final String content;
+        private final String filename;
+        private double similarity = 0.0;
+        private double rrfScore = 0.0;
+
+        RankedChunk(Object[] row) {
+            this.documentId = row[1] != null ? ((Number) row[1]).longValue() : null;
+            this.chunkIndex = row[2] != null ? ((Number) row[2]).intValue() : null;
+            this.content = row[3] != null ? (String) row[3] : null;
+            this.filename = row[4] != null ? (String) row[4] : null;
+        }
+
+        void addScore(int rank, Object[] row) {
+            this.rrfScore += 1.0 / (RRF_K + rank);
+            if (row[5] != null) {
+                double score = ((Number) row[5]).doubleValue();
+                this.similarity = Math.max(this.similarity, score);
+            }
+        }
+
+        double getRrfScore() {
+            return rrfScore;
+        }
+
+        SourceDocument toSource() {
+            return SourceDocument.builder()
+                    .documentId(documentId)
+                    .chunkIndex(chunkIndex)
+                    .excerpt(truncateExcerpt(content))
+                    .filename(filename)
+                    .relevanceScore(similarity)
+                    .build();
         }
     }
 
@@ -323,7 +421,7 @@ public class ChatbotService {
                 .build();
     }
 
-    private String truncateExcerpt(String excerpt) {
+    private static String truncateExcerpt(String excerpt) {
         if (excerpt != null && excerpt.length() > 150) {
             return excerpt.substring(0, 150) + "...";
         }

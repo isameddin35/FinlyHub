@@ -204,7 +204,7 @@ export function FinlyHubAssistant() {
 
                   return (
                     <div key={msg.id || 'streaming'}>
-                      {msg.sources && msg.sources.length > 0 && (
+                      {msg.sources && msg.sources.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
                           {msg.sources.map((s, j) => (
                             <div className="fha-source-card" key={`${msg.id}-src-${j}`}>
@@ -214,7 +214,9 @@ export function FinlyHubAssistant() {
                             </div>
                           ))}
                         </div>
-                      )}
+                      ) : msg.id > 0 ? (
+                        <div className="fha-no-sources">No documents matched your question — answering from general knowledge</div>
+                      ) : null}
                       <div className="fha-msg-row fha-ai">
                         <div className="fha-bubble">
                           <div className="fha-ai-avatar">

@@ -35,3 +35,5 @@ databaseChangeLog:
       file: db/changelog/V017__embedding_384dim.yaml
   - include:
       file: db/changelog/V018__add_document_progress_columns.yaml
+  - include:
+      file: db/changelog/V019__rag_hybrid_search.yaml

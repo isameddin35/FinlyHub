@@ -12,9 +12,9 @@
 
 ## Highest Priority
 
-- [ ] **Add BGE query instruction prefix** — Prepend `"Represent this sentence for searching relevant passages: "` to the user's question before embedding (query side only, not documents)
-- [ ] **Add similarity threshold on retrieval** — Discard chunks below a cosine similarity cutoff (e.g. ~0.4-0.5) instead of always returning top 5; show "no relevant documents found" in the UI when nothing clears the bar
-- [ ] **Add hybrid search (keyword + vector)** — Add Postgres full-text search (`tsvector`/`ts_rank`) alongside vector search and combine results, so exact matches (invoice IDs, account codes, dollar amounts) aren't missed by semantic search alone
+- [x] **Add BGE query instruction prefix** — Prepend `"Represent this sentence for searching relevant passages: "` to the user's question before embedding (query side only, not documents)
+- [x] **Add similarity threshold on retrieval** — Discard chunks below a cosine similarity cutoff (default 0.4, configurable via `ai.retrieval.min-similarity`) instead of always returning top 5; show "no documents matched" in the UI when nothing clears the bar
+- [x] **Add hybrid search (keyword + vector)** — Postgres full-text search (`tsvector`/`ts_rank`) alongside vector search, combined using Reciprocal Rank Fusion, so exact matches (invoice IDs, account codes, dollar amounts) aren't missed by semantic search alone
 
 ## Medium Priority
 
