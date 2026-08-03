@@ -226,7 +226,7 @@ User approves → Reconciliation COMPLETED → APPROVED
 
 ```
            ┌───────────────────────────────────────┐
-           │         AiService (interface)          │
+           │         AiService (interface)         │
            │                                       │
            │  +extractInvoiceData(text)            │
            │  +chat(ChatRequest)                   │

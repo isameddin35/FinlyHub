@@ -32,4 +32,7 @@ export interface CreateConversationRequest {
 
 export interface SendMessageRequest {
   message: string
+  documentType?: string
+  fromDate?: string
+  toDate?: string
 }

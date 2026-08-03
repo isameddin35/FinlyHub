@@ -1,0 +1,41 @@
+databaseChangeLog:
+  - changeSet:
+      id: V020-1
+      author: finlyhub
+      comment: Add embedding_status column to document_chunks for failed embedding tracking
+      changes:
+        - addColumn:
+            tableName: document_chunks
+            columns:
+              - column:
+                  name: embedding_status
+                  type: TEXT
+                  defaultValue: "OK"
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: V020-2
+      author: finlyhub
+      comment: Drop zero vectors inserted by the old fallback and mark them FAILED
+      changes:
+        - sql:
+            sql: >
+              UPDATE document_chunks
+              SET embedding = NULL, embedding_status = 'FAILED'
+              WHERE embedding = (
+                SELECT ('[' || string_agg('0', ',') || ']')::vector
+                FROM generate_series(1, 384)
+              )
+
+  - changeSet:
+      id: V020-3
+      author: finlyhub
+      comment: Replace ivfflat index with HNSW for more graceful scaling without list-count tuning
+      changes:
+        - sql:
+            sql: DROP INDEX IF EXISTS idx_chunks_embedding
+        - sql:
+            sql: >
+              CREATE INDEX idx_chunks_embedding ON document_chunks
+              USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64)

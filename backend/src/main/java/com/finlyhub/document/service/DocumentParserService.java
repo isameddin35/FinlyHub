@@ -1,5 +1,6 @@
 package com.finlyhub.document.service;
 
+import com.finlyhub.common.service.TokenizerService;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -20,6 +21,12 @@ public class DocumentParserService {
 
     private static final int CHUNK_TOKEN_SIZE = 512;
     private static final int CHUNK_OVERLAP_TOKENS = 64;
+
+    private final TokenizerService tokenizerService;
+
+    public DocumentParserService(TokenizerService tokenizerService) {
+        this.tokenizerService = tokenizerService;
+    }
 
     public String parseDocument(MultipartFile file) throws IOException {
         String filename = file.getOriginalFilename();
@@ -44,25 +51,50 @@ public class DocumentParserService {
     }
 
     public List<String> chunkDocument(String text) {
+        if (text == null || text.isBlank()) {
+            return List.of();
+        }
         List<String> chunks = new ArrayList<>();
         String[] words = text.split("\\s+");
         int totalWords = words.length;
         int start = 0;
 
         while (start < totalWords) {
-            int end = Math.min(start + CHUNK_TOKEN_SIZE, totalWords);
+            int end = start;
+            int tokenCount = 0;
             StringBuilder chunk = new StringBuilder();
-            for (int i = start; i < end; i++) {
-                if (i > start) {
+
+            while (end < totalWords) {
+                int wordTokens = tokenizerService.countTokens(words[end]);
+                if (tokenCount + wordTokens > CHUNK_TOKEN_SIZE && end > start) {
+                    break;
+                }
+                if (end > start) {
                     chunk.append(" ");
                 }
-                chunk.append(words[i]);
+                chunk.append(words[end]);
+                tokenCount += wordTokens;
+                end++;
             }
+
+            if (end == start) {
+                chunk.append(words[end]);
+                end++;
+            }
+
             chunks.add(chunk.toString());
+
             if (end == totalWords) {
                 break;
             }
-            start = end - CHUNK_OVERLAP_TOKENS;
+
+            int overlapTokens = 0;
+            int overlapStart = end;
+            while (overlapStart > start && overlapTokens < CHUNK_OVERLAP_TOKENS) {
+                overlapStart--;
+                overlapTokens += tokenizerService.countTokens(words[overlapStart]);
+            }
+            start = overlapStart > start ? overlapStart : start + 1;
         }
 
         return chunks;
@@ -72,7 +104,7 @@ public class DocumentParserService {
         if (text == null || text.isEmpty()) {
             return 0;
         }
-        return text.split("\\s+").length;
+        return tokenizerService.countTokens(text);
     }
 
     private String parsePdf(java.io.InputStream inputStream) throws IOException {

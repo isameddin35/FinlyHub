@@ -106,4 +106,72 @@ describe('FinlyHubAssistant', () => {
       expect(screen.getByText('Your revenue was $125,000.')).toBeTruthy()
     })
   })
+
+  it('shows no-sources hint when assistant message has no sources', async () => {
+    const conv = mockConv()
+    vi.mocked(chatbotApi.listConversations).mockResolvedValue([conv])
+    vi.mocked(chatbotApi.getMessages).mockResolvedValue([
+      mockMessage({ id: 1, role: 'user', content: 'Anything in docs?' }),
+      mockMessage({ id: 2, role: 'assistant', content: 'No documents matched.' }),
+    ])
+    renderWithQuery(<FinlyHubAssistant />)
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Review')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Q1 Review'))
+    await waitFor(() => {
+      expect(screen.getByText('No documents matched your question — answering from general knowledge')).toBeTruthy()
+    })
+  })
+
+  it('renders source cards when assistant message has sources', async () => {
+    const conv = mockConv()
+    vi.mocked(chatbotApi.listConversations).mockResolvedValue([conv])
+    vi.mocked(chatbotApi.getMessages).mockResolvedValue([
+      mockMessage({ id: 1, role: 'user', content: 'What was our revenue?' }),
+      mockMessage({
+        id: 2,
+        role: 'assistant',
+        content: 'Your revenue was $125,000.',
+        sources: [{ documentId: 5, filename: 'q1_report.pdf', excerpt: 'Revenue section', relevanceScore: 0.87, chunkIndex: 2 }],
+      }),
+    ])
+    renderWithQuery(<FinlyHubAssistant />)
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Review')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Q1 Review'))
+    await waitFor(() => {
+      expect(screen.getByText('q1_report.pdf — Revenue section')).toBeTruthy()
+      expect(screen.getByText('87%')).toBeTruthy()
+      expect(screen.queryByText('No documents matched your question — answering from general knowledge')).toBeNull()
+    })
+  })
+
+  it('passes selected document type filter to streamMessage', async () => {
+    const conv = mockConv()
+    vi.mocked(chatbotApi.listConversations).mockResolvedValue([conv])
+    vi.mocked(chatbotApi.getMessages).mockResolvedValue([])
+    vi.mocked(chatbotApi.streamMessage).mockImplementation((_id, _data, _onToken, onDone) => {
+      onDone(mockMessage({ id: 2, role: 'assistant', content: 'Ok.' }))
+      return { abort: vi.fn() } as any
+    })
+    renderWithQuery(<FinlyHubAssistant />)
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Review')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Q1 Review'))
+    const select = screen.getByLabelText('Filter by document type') as HTMLSelectElement
+    await userEvent.selectOptions(select, 'INVOICE')
+    await userEvent.type(screen.getByPlaceholderText('Ask a question about your finances...'), 'how are invoices handled{enter}')
+    await waitFor(() => {
+      expect(chatbotApi.streamMessage).toHaveBeenCalledWith(
+        1,
+        { message: 'how are invoices handled', documentType: 'INVOICE' },
+        expect.any(Function),
+        expect.any(Function),
+        expect.any(Function),
+      )
+    })
+  })
 })

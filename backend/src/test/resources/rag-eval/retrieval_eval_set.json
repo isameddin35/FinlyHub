@@ -1,0 +1,97 @@
+{
+  "users": {
+    "admin": "admin@finlyhub.com",
+    "accountant": "accountant@finlyhub.com",
+    "viewer": "viewer@finlyhub.com"
+  },
+  "minPrecisionAtK": 0.7,
+  "questions": [
+    {
+      "user": "admin",
+      "question": "What is the home office deduction rate for small businesses?",
+      "expected": [
+        { "filename": "tax_policy_2026.pdf", "chunkIndex": 0 }
+      ]
+    },
+    {
+      "user": "admin",
+      "question": "How can business owners deduct vehicle expenses?",
+      "expected": [
+        { "filename": "tax_policy_2026.pdf", "chunkIndex": 1 }
+      ]
+    },
+    {
+      "user": "admin",
+      "question": "Can self-employed people deduct health insurance premiums?",
+      "expected": [
+        { "filename": "tax_policy_2026.pdf", "chunkIndex": 1 }
+      ]
+    },
+    {
+      "user": "admin",
+      "question": "What is the standard VAT rate in the EU?",
+      "expected": [
+        { "filename": "eu_vat_directive.docx", "chunkIndex": 0 }
+      ]
+    },
+    {
+      "user": "admin",
+      "question": "How are digital services supplied to consumers taxed?",
+      "expected": [
+        { "filename": "eu_vat_directive.docx", "chunkIndex": 1 }
+      ],
+      "alternate": [
+        { "filename": "eu_vat_directive.docx", "chunkIndex": 2 }
+      ]
+    },
+    {
+      "user": "accountant",
+      "question": "When is revenue recognized under GAAP?",
+      "expected": [
+        { "filename": "gaap_accounting_standards.pdf", "chunkIndex": 0 }
+      ]
+    },
+    {
+      "user": "accountant",
+      "question": "How are leases accounted for under GAAP?",
+      "expected": [
+        { "filename": "gaap_accounting_standards.pdf", "chunkIndex": 1 }
+      ]
+    },
+    {
+      "user": "accountant",
+      "question": "What inventory costing methods are common?",
+      "expected": [
+        { "filename": "gaap_accounting_standards.pdf", "chunkIndex": 1 }
+      ]
+    },
+    {
+      "user": "accountant",
+      "question": "How is goodwill tested for impairment?",
+      "expected": [
+        { "filename": "gaap_accounting_standards.pdf", "chunkIndex": 2 }
+      ]
+    },
+    {
+      "user": "viewer",
+      "question": "How many business days after quarter end must reports be submitted?",
+      "expected": [
+        { "filename": "quarterly_financial_guidelines.docx", "chunkIndex": 0 }
+      ]
+    },
+    {
+      "user": "viewer",
+      "question": "Which key metrics must be included in quarterly reports?",
+      "expected": [
+        { "filename": "quarterly_financial_guidelines.docx", "chunkIndex": 1 }
+      ]
+    },
+    {
+      "user": "viewer",
+      "question": "Is variance analysis against budget required?",
+      "expected": [
+        { "filename": "quarterly_financial_guidelines.docx", "chunkIndex": 1 }
+      ]
+    }
+  ]
+}

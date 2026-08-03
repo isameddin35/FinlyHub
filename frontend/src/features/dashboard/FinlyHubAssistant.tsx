@@ -21,6 +21,7 @@ export function FinlyHubAssistant() {
   const [streamingContent, setStreamingContent] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [lastUserMessage, setLastUserMessage] = useState('')
+  const [documentTypeFilter, setDocumentTypeFilter] = useState('')
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const { data: conversations, isLoading: conversationsLoading } = useQuery({
@@ -112,7 +113,7 @@ export function FinlyHubAssistant() {
 
     const controller = chatbotApi.streamMessage(
       activeConversation.id,
-      { message: text },
+      { message: text, documentType: documentTypeFilter || undefined },
       (token) => {
         setStreamingContent((prev) => prev + token)
       },
@@ -129,7 +130,7 @@ export function FinlyHubAssistant() {
       },
     )
     abortControllerRef.current = controller
-  }, [draft, activeConversation, isStreaming, queryClient])
+  }, [draft, activeConversation, isStreaming, queryClient, documentTypeFilter])
 
   const handleDeleteThread = useCallback((e: React.MouseEvent, id: number) => {
     e.stopPropagation()
@@ -204,7 +205,7 @@ export function FinlyHubAssistant() {
 
                   return (
                     <div key={msg.id || 'streaming'}>
-                      {msg.sources && msg.sources.length > 0 && (
+                      {msg.sources && msg.sources.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
                           {msg.sources.map((s, j) => (
                             <div className="fha-source-card" key={`${msg.id}-src-${j}`}>
@@ -214,7 +215,9 @@ export function FinlyHubAssistant() {
                             </div>
                           ))}
                         </div>
-                      )}
+                      ) : msg.id > 0 ? (
+                        <div className="fha-no-sources">No documents matched your question — answering from general knowledge</div>
+                      ) : null}
                       <div className="fha-msg-row fha-ai">
                         <div className="fha-bubble">
                           <div className="fha-ai-avatar">
@@ -239,6 +242,20 @@ export function FinlyHubAssistant() {
               )}
             </div>
 
+            <div className="fha-filter-row">
+              <select
+                value={documentTypeFilter}
+                onChange={(e) => setDocumentTypeFilter(e.target.value)}
+                disabled={isStreaming}
+                aria-label="Filter by document type"
+              >
+                <option value="">All document types</option>
+                <option value="INVOICE">Invoices</option>
+                <option value="POLICY">Policies</option>
+                <option value="GUIDELINE">Guidelines</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
             <div className="fha-input-row">
               <input
                 ref={inputRef}
