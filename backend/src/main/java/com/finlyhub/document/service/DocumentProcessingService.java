@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DocumentProcessingService {
 
-    private static final int EMBEDDING_DIM = 384;
     private static final int BATCH_SIZE = 32;
 
     private final DocumentRepository documentRepository;
@@ -82,7 +81,7 @@ public class DocumentProcessingService {
                 return null;
             });
 
-            String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, created_at) VALUES (?, ?, ?, ?, ?, cast(? as vector), NOW())";
+            String insertSql = "INSERT INTO document_chunks (document_id, chunk_index, content, token_count, filename, embedding, embedding_status, created_at) VALUES (?, ?, ?, ?, ?, cast(? as vector), ?, NOW())";
 
             for (int batchStart = 0; batchStart < chunks.size(); batchStart += BATCH_SIZE) {
                 final int batchStartFinal = batchStart;
@@ -115,10 +114,11 @@ public class DocumentProcessingService {
 
                         try {
                             List<Float> embeddingVector = (j < batchEmbeddings.size()) ? batchEmbeddings.get(j) : List.of();
-                            String embStr;
+                            String embStr = null;
+                            String embeddingStatus = "OK";
                             if (embeddingVector == null || embeddingVector.isEmpty()) {
-                                embStr = buildZeroVector();
-                                log.warn("Document {} chunk {} embedding empty, using zero-vector fallback", documentId, idx);
+                                embeddingStatus = "FAILED";
+                                log.warn("Document {} chunk {} embedding failed, chunk kept without vector", documentId, idx);
                             } else {
                                 embStr = embeddingVector.stream()
                                         .map(String::valueOf)
@@ -131,7 +131,8 @@ public class DocumentProcessingService {
                                     .setParameter(3, chunkText)
                                     .setParameter(4, tokenCount)
                                     .setParameter(5, doc.getOriginalFilename())
-                                    .setParameter(6, "[" + embStr + "]")
+                                    .setParameter(6, embStr != null ? "[" + embStr + "]" : null)
+                                    .setParameter(7, embeddingStatus)
                                     .executeUpdate();
                             inserted++;
                         } catch (Exception e) {
@@ -168,9 +169,5 @@ public class DocumentProcessingService {
                 return null;
             });
         }
-    }
-
-    private String buildZeroVector() {
-        return "0,".repeat(EMBEDDING_DIM - 1) + "0";
     }
 }

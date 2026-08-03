@@ -37,3 +37,5 @@ databaseChangeLog:
       file: db/changelog/V018__add_document_progress_columns.yaml
   - include:
       file: db/changelog/V019__rag_hybrid_search.yaml
+  - include:
+      file: db/changelog/V020__embedding_failures_and_hnsw.yaml
