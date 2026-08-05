@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { reportApi } from '@/api/reports'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, CartesianGrid } from 'recharts'
+import type { ReportResponse, ReportSummaryResponse, ReportChartConfig } from '@/types/report'
 
 const CSS = `
 .fhr-root{ font-family:'Inter', sans-serif; color:#1E293B; }
@@ -44,6 +45,7 @@ const CSS = `
   display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px;
   border-radius:10px; border:1px solid #F1F5F9; font-size:13px; color:#1E293B; margin-bottom:8px;
   cursor:pointer; transition:background 0.15s ease;
+  width:100%; text-align:left; font-family:inherit; background:none;
 }
 .fhr-saved-item:hover{ background:#F8FAFC; }
 .fhr-saved-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -107,7 +109,7 @@ const CSS = `
 .dark .fhr-report-section h4{ color:#F1F5F9; }
 .dark .fhr-header h2{ color:#F1F5F9; }
 .dark .fhr-empty-title{ color:#94A3B8; }
-.dark .fhr-saved-item{ border-color:#334155; color:#E2E8F0; }
+.dark .fhr-saved-item{ background:rgba(30,41,59,0.6); border-color:#334155; color:#E2E8F0; }
 .dark .fhr-saved-item:hover{ background:#1E293B; }
 .dark .fhr-export-btn{ background:#1E293B; border-color:#334155; color:#E2E8F0; }
 .dark .fhr-export-btn:hover{ background:#0F172A; }
@@ -147,8 +149,153 @@ const formatMoney = (n: number) => new Intl.NumberFormat("en-US", { style: "curr
 
 const prettyKey = (key: string) => key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim();
 
+type ChartDatum = { name: string; value: number };
+type StatCard = { key: string; value: number };
+
+function buildChartData(report: ReportResponse): ChartDatum[] {
+  const chartConfig = report.chartConfig;
+  const labels = chartConfig?.labels;
+  if (!labels) return [];
+  const values = chartConfig.datasets[0]?.data;
+  return labels.map((label, i) => ({ name: label, value: values?.[i] ?? 0 }));
+}
+
+function buildStatCards(data: Record<string, unknown>): StatCard[] {
+  const cards: StatCard[] = [];
+  for (const [key, value] of Object.entries(data)) {
+    if (key === 'labels' || key === 'values' || key === 'totals') continue;
+    if (typeof value === 'number') cards.push({ key, value });
+  }
+  const totals = data.totals as Record<string, unknown> | undefined;
+  if (totals && typeof totals.total === 'number') cards.push({ key: 'Total', value: totals.total });
+  if (totals && typeof totals.average === 'number') cards.push({ key: 'Average', value: totals.average });
+  if (totals && typeof totals.count === 'number') cards.push({ key: 'Transactions', value: totals.count });
+  return cards;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return <span className={`fhr-badge ${STATUS_BADGE_CLASS[status] || 'fhr-badge-pending'}`}>{status}</span>;
+}
+
+function ReportHead({ report, actions }: { report: ReportResponse | ReportSummaryResponse; actions?: React.ReactNode }) {
+  return (
+    <div className="fhr-report-head">
+      <div>
+        <div className="fhr-report-title">{report.title}</div>
+        <div className="fhr-report-range">{report.periodStart} → {report.periodEnd}</div>
+      </div>
+      {actions}
+    </div>
+  );
+}
+
+function SavedReportsList({ reports, onSelect }: { reports: ReportSummaryResponse[]; onSelect: (id: number) => void }) {
+  if (!reports || reports.length === 0) {
+    return <div className="fhr-saved-empty">No reports yet</div>;
+  }
+  return (
+    <>
+      {reports.map((r) => (
+        <button type="button" className="fhr-saved-item" key={r.id} onClick={() => onSelect(r.id)}>
+          <span className="fhr-saved-title">{r.title || `${r.type} — ${r.periodStart} to ${r.periodEnd}`}</span>
+          <StatusBadge status={r.status} />
+        </button>
+      ))}
+    </>
+  );
+}
+
+function ReportStatCards({ data }: { data: Record<string, unknown> }) {
+  const cards = buildStatCards(data);
+  if (cards.length === 0) return null;
+  return (
+    <div className="fhr-report-grid">
+      {cards.map((s) => (
+        <div className="fhr-report-stat" key={s.key}>
+          <div className="fhr-rs-label">{prettyKey(s.key)}</div>
+          <div className="fhr-rs-value">{s.key === 'Transactions' || s.key === 'Count' ? s.value.toLocaleString() : formatMoney(s.value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ReportChart({ chartConfig, chartData }: { chartConfig: ReportChartConfig; chartData: ChartDatum[] }) {
+  if (chartData.length === 0) return null;
+  return (
+    <div className="fhr-report-section">
+      <h4>{chartConfig.type === 'pie' ? 'Breakdown' : 'Trend'}</h4>
+      {chartConfig.type === 'pie' ? (
+        <PieChart width={560} height={260}>
+          <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={100} label={(e: any) => e.name}>
+            {chartData.map((item, i) => <Cell key={item.name} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+          </Pie>
+          <Tooltip formatter={(v) => formatMoney(Number(v))} />
+        </PieChart>
+      ) : (
+        <BarChart width={560} height={260} data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} />
+          <YAxis tick={{ fontSize: 11, fill: '#64748B' }} />
+          <Tooltip formatter={(v) => formatMoney(Number(v))} />
+          <Bar dataKey="value" fill="#2563EB" radius={[6, 6, 0, 0]} />
+        </BarChart>
+      )}
+    </div>
+  );
+}
+
+function ReportPreview({ loading, report, onExport }: { loading: boolean; report: ReportResponse | undefined; onExport: (format: string) => void }) {
+  if (loading) {
+    return <div className="fhr-spinner" />;
+  }
+  if (!report) {
+    return (
+      <div className="fhr-empty">
+        <svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4M9 12.5h6M9 15.8h6" /></svg>
+        <div className="fhr-empty-title">No report selected</div>
+        <div className="fhr-empty-sub">Generate a report to get started</div>
+      </div>
+    );
+  }
+  if (report.status === 'GENERATING' || report.status === 'PENDING') {
+    return (
+      <div className="fhr-report">
+        <ReportHead report={report} actions={<StatusBadge status={report.status} />} />
+        <div className="fhr-spinner" />
+      </div>
+    );
+  }
+  if (report.status === 'FAILED') {
+    return (
+      <div className="fhr-report">
+        <ReportHead report={report} actions={<span className="fhr-badge fhr-badge-failed">FAILED</span>} />
+        <div className="fhr-failed">Report generation failed. Try generating it again.</div>
+      </div>
+    );
+  }
+  return (
+    <div className="fhr-report">
+      <ReportHead
+        report={report}
+        actions={
+          <div className="fhr-report-actions">
+            <button type="button" className="fhr-export-btn" onClick={() => onExport('PDF')}>Export PDF</button>
+            <button type="button" className="fhr-export-btn" onClick={() => onExport('EXCEL')}>Export Excel</button>
+          </div>
+        }
+      />
+      <ReportStatCards data={report.data} />
+      {report.chartConfig && <ReportChart chartConfig={report.chartConfig} chartData={buildChartData(report)} />}
+      {report.aiInsights && (
+        <div className="fhr-ai">{report.aiInsights}</div>
+      )}
+    </div>
+  );
+}
+
 export function FinlyHubReports() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   const [type, setType] = useState("");
   const [subtype, setSubtype] = useState("");
   const [periodStart, setPeriodStart] = useState("");
@@ -160,77 +307,51 @@ export function FinlyHubReports() {
   const { data: savedReports } = useQuery({
     queryKey: ['reports'],
     queryFn: async () => {
-      const res = await reportApi.list()
-      return res.data.data
+      const res = await reportApi.list();
+      return res.data.data;
     },
     refetchInterval: (query) => (query.state.data?.some((r) => r.status === 'GENERATING') ? 3000 : false),
-  })
+  });
 
   const { data: selectedReport, isFetching } = useQuery({
     queryKey: ['report', selectedId],
     queryFn: async () => {
-      const res = await reportApi.getById(selectedId!)
-      return res.data.data
+      const res = await reportApi.getById(selectedId!);
+      return res.data.data;
     },
     enabled: selectedId != null,
     refetchInterval: (query) => (query.state.data?.status === 'GENERATING' ? 2500 : false),
-  })
+  });
 
   const generateMutation = useMutation({
     mutationFn: () => reportApi.generate({
-      type,
-      subtype,
-      periodStart,
-      periodEnd,
+      type, subtype, periodStart, periodEnd,
     }),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ['reports'] })
-      setSelectedId(res.data.data.id)
-      toast.success('Report generation started')
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
+      setSelectedId(res.data.data.id);
+      toast.success('Report generation started');
     },
     onError: () => toast.error('Failed to generate report'),
-  })
+  });
 
   const handleExport = async (format: string) => {
-    if (selectedId == null) return
+    if (selectedId == null) return;
     try {
-      const res = await reportApi.export(selectedId, format)
-      const url = URL.createObjectURL(res.data as Blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `report_${selectedId}.${format.toLowerCase()}`
-      a.click()
-      URL.revokeObjectURL(url)
-      toast.success('Report exported')
+      const res = await reportApi.export(selectedId, format);
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${selectedId}.${format.toLowerCase()}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Report exported');
     } catch {
-      toast.error('Export failed')
+      toast.error('Export failed');
     }
-  }
+  };
 
-  const chartData = selectedReport?.chartConfig?.labels
-    ? selectedReport.chartConfig.labels.map((label, i) => ({
-        name: label,
-        value: selectedReport.chartConfig!.datasets[0]?.data?.[i] ?? 0,
-      }))
-    : [];
-
-  const statCards: { key: string; value: number }[] = [];
-  if (selectedReport?.data) {
-    for (const [key, value] of Object.entries(selectedReport.data)) {
-      if (key === 'labels' || key === 'values' || key === 'totals') continue;
-      if (typeof value === 'number') statCards.push({ key, value });
-    }
-    const totals = selectedReport.data.totals as Record<string, unknown> | undefined;
-    if (totals && typeof totals.total === 'number') {
-      statCards.push({ key: 'Total', value: totals.total });
-    }
-    if (totals && typeof totals.average === 'number') {
-      statCards.push({ key: 'Average', value: totals.average });
-    }
-    if (totals && typeof totals.count === 'number') {
-      statCards.push({ key: 'Transactions', value: totals.count });
-    }
-  }
+  const previewLoading = generateMutation.isPending || (selectedId != null && isFetching && !selectedReport);
 
   return (
     <div className="fhr-root">
@@ -272,103 +393,12 @@ export function FinlyHubReports() {
 
           <div className="fhr-panel">
             <h3>Saved Reports</h3>
-            {!savedReports || savedReports.length === 0 ? (
-              <div className="fhr-saved-empty">No reports yet</div>
-            ) : (
-              savedReports.map((r) => (
-                <div className="fhr-saved-item" key={r.id} onClick={() => setSelectedId(r.id)}>
-                  <span className="fhr-saved-title">{r.title || `${r.type} — ${r.periodStart} to ${r.periodEnd}`}</span>
-                  <span className={`fhr-badge ${STATUS_BADGE_CLASS[r.status] || 'fhr-badge-pending'}`}>{r.status}</span>
-                </div>
-              ))
-            )}
+            <SavedReportsList reports={savedReports ?? []} onSelect={setSelectedId} />
           </div>
         </div>
 
         <div className="fhr-preview">
-          {generateMutation.isPending || (selectedId != null && isFetching && !selectedReport) ? (
-            <div className="fhr-spinner" />
-          ) : !selectedReport ? (
-            <div className="fhr-empty">
-              <svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4M9 12.5h6M9 15.8h6" /></svg>
-              <div className="fhr-empty-title">No report selected</div>
-              <div className="fhr-empty-sub">Generate a report to get started</div>
-            </div>
-          ) : selectedReport.status === 'GENERATING' || selectedReport.status === 'PENDING' ? (
-            <div className="fhr-report">
-              <div className="fhr-report-head">
-                <div>
-                  <div className="fhr-report-title">{selectedReport.title}</div>
-                  <div className="fhr-report-range">{selectedReport.periodStart} → {selectedReport.periodEnd}</div>
-                </div>
-                <span className={`fhr-badge ${STATUS_BADGE_CLASS[selectedReport.status] || 'fhr-badge-pending'}`}>{selectedReport.status}</span>
-              </div>
-              <div className="fhr-spinner" />
-            </div>
-          ) : selectedReport.status === 'FAILED' ? (
-            <div className="fhr-report">
-              <div className="fhr-report-head">
-                <div>
-                  <div className="fhr-report-title">{selectedReport.title}</div>
-                  <div className="fhr-report-range">{selectedReport.periodStart} → {selectedReport.periodEnd}</div>
-                </div>
-                <span className="fhr-badge fhr-badge-failed">FAILED</span>
-              </div>
-              <div className="fhr-failed">Report generation failed. Try generating it again.</div>
-            </div>
-          ) : (
-            <div className="fhr-report">
-              <div className="fhr-report-head">
-                <div>
-                  <div className="fhr-report-title">{selectedReport.title}</div>
-                  <div className="fhr-report-range">{selectedReport.periodStart} → {selectedReport.periodEnd}</div>
-                </div>
-                <div className="fhr-report-actions">
-                  <button type="button" className="fhr-export-btn" onClick={() => handleExport('PDF')}>Export PDF</button>
-                  <button type="button" className="fhr-export-btn" onClick={() => handleExport('EXCEL')}>Export Excel</button>
-                </div>
-              </div>
-
-              {statCards.length > 0 && (
-                <div className="fhr-report-grid">
-                  {statCards.map((s) => (
-                    <div className="fhr-report-stat" key={s.key}>
-                      <div className="fhr-rs-label">{prettyKey(s.key)}</div>
-                      <div className="fhr-rs-value">{s.key === 'Transactions' || s.key === 'Count' ? s.value.toLocaleString() : formatMoney(s.value)}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedReport.chartConfig && chartData.length > 0 && (
-                <div className="fhr-report-section">
-                  <h4>{selectedReport.chartConfig.type === 'pie' ? 'Breakdown' : 'Trend'}</h4>
-                  {selectedReport.chartConfig.type === 'pie' ? (
-                    <PieChart width={560} height={260}>
-                      <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={100} label={(e: any) => e.name}>
-                        {chartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                      </Pie>
-                      <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                    </PieChart>
-                  ) : (
-                    <BarChart width={560} height={260} data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} />
-                      <YAxis tick={{ fontSize: 11, fill: '#64748B' }} />
-                      <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                      <Bar dataKey="value" fill="#2563EB" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  )}
-                </div>
-              )}
-
-              {selectedReport.aiInsights && (
-                <div className="fhr-ai">
-                  {selectedReport.aiInsights}
-                </div>
-              )}
-            </div>
-          )}
+          <ReportPreview loading={previewLoading} report={selectedReport} onExport={handleExport} />
         </div>
       </div>
     </div>
