@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 public class Report {
 
     public enum ReportType {
-        REVENUE, EXPENSE, PROFIT, CASHFLOW
+        REVENUE, EXPENSE, PROFIT, BALANCE_SHEET, CASHFLOW
     }
 
     public enum ReportSubtype {

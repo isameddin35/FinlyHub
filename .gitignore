@@ -18,6 +18,7 @@ target/
 application-local.yml
 
 uploads/
+examples/
 *.tsbuildinfo
 deploy/terraform/.terraform/
 *.tfstate

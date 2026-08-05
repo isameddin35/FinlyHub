@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - changeSet:
+      id: V022-1
+      author: finlyhub
+      changes:
+        - sql:
+            sql: ALTER TABLE reports ALTER COLUMN parameters TYPE TEXT USING parameters::text
+        - sql:
+            sql: ALTER TABLE reports ALTER COLUMN data TYPE TEXT USING data::text
+        - sql:
+            sql: ALTER TABLE reports ALTER COLUMN chart_config TYPE TEXT USING chart_config::text

@@ -6,6 +6,16 @@ export interface ReportRequest {
   parameters?: Record<string, string>
 }
 
+export interface ReportChartConfig {
+  type: 'bar' | 'pie'
+  labels: string[] | null
+  datasets: {
+    label: string
+    data: number[] | null
+    backgroundColor?: string[]
+  }[]
+}
+
 export interface ReportResponse {
   id: number
   title: string
@@ -13,7 +23,7 @@ export interface ReportResponse {
   subtype: string
   data: Record<string, unknown>
   aiInsights: string | null
-  chartConfig: Record<string, unknown> | null
+  chartConfig: ReportChartConfig | null
   status: string
   periodStart: string
   periodEnd: string

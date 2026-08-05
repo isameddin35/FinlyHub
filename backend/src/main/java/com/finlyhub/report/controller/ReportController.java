@@ -39,7 +39,8 @@ public class ReportController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ReportResponse>> getReport(@PathVariable Long id) {
-        ReportResponse response = reportService.getReportById(id);
+        Long userId = SecurityUtils.getCurrentUserId();
+        ReportResponse response = reportService.getReportById(userId, id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -47,7 +48,8 @@ public class ReportController {
     public ResponseEntity<byte[]> exportReport(
             @PathVariable Long id,
             @RequestParam(defaultValue = "PDF") String format) {
-        byte[] data = reportService.exportReport(id, format);
+        Long userId = SecurityUtils.getCurrentUserId();
+        byte[] data = reportService.exportReport(userId, id, format);
         String filename = "report_" + id + "." + format.toLowerCase();
         MediaType mediaType = "PDF".equalsIgnoreCase(format)
                 ? MediaType.APPLICATION_PDF
