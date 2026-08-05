@@ -18,7 +18,7 @@
 - [x] **Backend Dockerfile** — Multi-stage (Maven build → Alpine JRE + Tesseract)
 - [x] **Frontend Vite project** — React 19, TypeScript 5.7, Tailwind 3.4, shadcn/ui
 - [x] **Frontend Dockerfile + nginx** — Multi-stage build, SPA fallback, `/api` proxy
-- [x] **Liquibase changelogs** — 18 YAML files (V001–V018), 17 tables
+- [x] **Liquibase changelogs** — 20 YAML files (V001–V020), 17 tables
 - [x] **JWT authentication** — Login/register/refresh with access + refresh tokens
 - [x] **Spring Security** — Stateless sessions, CORS, role-based guards
 - [x] **Global exception handler** — `@RestControllerAdvice` with typed HTTP codes
@@ -89,6 +89,19 @@
 - [x] **Fixed CI/CD — sequential zero-downtime deploy** — build images first, then `--no-deps` per-service restart with health check loops, plus `deploy/rollback.sh`
 - [x] **Made invoice fields editable before approval** — Replaced `ConfidenceField` with editable form inputs in dialog
 
+## Phase 5: RAG Retrieval Quality
+
+- [x] **Token-based chunking** — DJL tokenizer (bge-small-en-v1.5) splits documents into 512-token windows with 64-token overlap
+- [x] **Batched ONNX embeddings** — `OnnxBgeEmbeddingService.embedBatch` caps at 32 per call (`embedBatchInternal`) to bound native memory
+- [x] **Embedding failure tracking** — V020 adds `document_chunks.embedding_status` (OK/FAILED); failed chunks get NULL vector instead of zero-vector fallback
+- [x] **HNSW index** — V020 replaces ivfflat with `idx_chunks_embedding` HNSW (`m=16, ef_construction=64`)
+- [x] **Hybrid keyword + vector retrieval** — RRF fusion of BM25-style keyword and pgvector cosine scores (V019); `min-similarity` 0.4 by default
+- [x] **MMR reranking** — `mmr-lambda` 0.7 diversifies results; top-5 chunks returned
+- [x] **Metadata filters** — Chat retrieval filters by `document_type` + date range
+- [x] **Golden retrieval eval set** — `retrieval_eval_set.json` + `RagEvalIntegrationTest` (runs with `RUN_RAG_EVAL=true`)
+- [x] **Demo embedding reindexer** — `DemoEmbeddingReindexer` re-embeds demo chunks at startup, batched at 32; off by default (`AI_REINDEX_ON_STARTUP=false`) to prevent OOM
+- [x] **OOM fix + unit tests** — `DemoEmbeddingReindexerTest` + `OnnxBgeEmbeddingServiceTest` cover batching and failure paths (87 backend tests total)
+
 ## Phase 4: UI Improvements
 
 - [x] **Markdown rendering in chat** — Added `react-markdown` + `remark-gfm` for formatted bot responses
@@ -107,7 +120,8 @@
 ## Future Enhancements
 
 - [ ] **Production deployment guide** — SSL, domain, CORS for non-localhost
-- [ ] **Test suite** — Backend (JUnit 5 + Testcontainers), Frontend (Vitest + Playwright)
+- [x] **Test suite (unit)** — Backend: JUnit 5 + Mockito (87 tests); Frontend: Vitest (103 tests)
+- [ ] **Test suite (integration + E2E)** — Backend Testcontainers, Frontend Playwright
 - [ ] **Multi-tenancy** — Company-scoped data isolation
 - [ ] **SSO / OAuth2** — Google/Microsoft login
 - [ ] **Email notifications** — SendGrid / SMTP integration

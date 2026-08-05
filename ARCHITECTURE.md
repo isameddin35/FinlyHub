@@ -9,7 +9,7 @@
 └──────────┘       └──────────┘       └──────────────┘       └──────────────────┘
      ▲                   │                                        │
      │                   │ /api/health                            │ vector(384)
-     │                   └──┬── /api/* ──── backend:8080          │ IVFFLAT index
+     │                   └──┬── /api/* ──── backend:8080          │ HNSW index
      │                      │                                     │
      │                ┌─────┴──────┐                              │
      │                │            │                              │
@@ -52,7 +52,8 @@
            ▼        ▼                 ▼             ▼
     ┌───────────────────────────────────────────────────────┐
     │                   chatbot                              │
-    │  conversation CRUD + pgvector <=> search → AiService  │
+    │  conversation CRUD + hybrid RAG (RRF + MMR + filters)  │
+    │  → AiService                                          │
     └───────────────────────────────────────────────────────┘
 
     ┌──────────────┐   ┌──────────────────┐
@@ -116,7 +117,7 @@ roles ──< user_roles >── users ──┬── documents ──< documen
 | 2 | `users` | User accounts | email (UNIQUE), password_hash |
 | 3 | `user_roles` | Many-to-many join | user_id, role_id |
 | 4 | `documents` | General-purpose document store | user_id, document_type, status, raw_text |
-| 5 | `document_chunks` | RAG text chunks with embeddings | document_id, chunk_index, embedding (vector(384)) |
+| 5 | `document_chunks` | RAG text chunks with embeddings | document_id, chunk_index, embedding (vector(384)), embedding_status (OK/FAILED) |
 | 6 | `invoice_documents` | Invoice-specific file metadata | user_id, filename, file_path |
 | 7 | `invoices` | Extracted invoice data | user_id, document_id, vendor, amounts, status |
 | 8 | `invoice_extractions` | OCR + AI extraction history | invoice_id, stage, extracted_data (JSONB) |
@@ -168,19 +169,24 @@ Upload PDF/DOCX/TXT
 Parse text (PDFBox/POI)
     │
     ▼
-Chunk (512 tokens, 64-token overlap)
+Chunk via tokenizer (512 tokens, 64-token overlap)
     │
     ▼
-For each chunk: AiService.generateEmbedding → [0.15, -0.02, ...] (384 dims)
+Batch embeddings (max 32/call, ONNX bge-small-en-v1.5, 384 dims)
     │
     ▼
 Store chunk + embedding in document_chunks
+(failures → embedding_status=FAILED, embedding=NULL)
     │
     ▼
 [Later] User asks chatbot question
     │
     ▼
-Embed question → pgvector `<=>` (cosine distance) → top-3 chunks
+Embed question with BGE query prefix →
+hybrid keyword + vector retrieval (RRF fusion, min-similarity 0.4)
+    │
+    ▼
+MMR rerank (lambda 0.7) → top-5 chunks (optional metadata filters)
     │
     ▼
 Build context prompt → AiService.chat() → Response with source citations
@@ -258,7 +264,7 @@ User approves → Reconciliation COMPLETED → APPROVED
 
 **Groq path fix**: `OpenAiApi` uses `@POST("/v1/chat/completions")` — leading slash causes absolute path resolution in OkHttp, dropping `/openai/` from the base URL. An interceptor rewrites `/v1/{path}` → `/openai/v1/{path}` for the Groq client only.
 
-**Embedding fallback**: On failure, `generateEmbedding()` returns `List.of()` (empty) instead of random noise — chat works without document context.
+**Embedding reliability**: Embeddings are generated in batches (max 32 per call — `OnnxBgeEmbeddingService.embedBatchInternal` caps the ONNX batch to bound native memory). On failure, the chunk is marked `embedding_status=FAILED` with a NULL embedding instead of being silently skipped — chat falls back to keyword-only retrieval for those chunks. `DemoEmbeddingReindexer` (demo profile) can re-embed all chunks at startup, also batched at 32; off by default (`AI_REINDEX_ON_STARTUP=false`).
 
 ---
 
@@ -371,7 +377,15 @@ Frontend:                     Backend:
 | **Single OpenAiService for chat only** | Embeddings run in-process via ONNX Runtime; no separate embedding service, API key, or network calls needed |
 | **OkHttp interceptor for Groq path fix** | Minimal code change — one interceptor rewrites `/v1/` → `/openai/v1/` to fix OkHttp absolute-path resolution |
 | **`cast(? as vector)` over `?::vector`** | `?::vector` causes PostgreSQL to infer parameter as vector type; JDBC can't serialize String as vector. `cast(? as vector)` keeps parameter as unknown/text |
-| **Embedding failure returns empty list** | `List.of()` avoids semantically meaningless noise; chat still works without document context |
+| **Embedding failure leaves NULL vector** | Failed chunks are marked `embedding_status=FAILED` with a NULL embedding — avoids meaningless noise vectors and keeps chat working via keyword-only retrieval |
+| **HNSW over IVFFLAT** | V020 replaces the ivfflat index with HNSW `(m=16, ef_construction=64)` — no list-count tuning, scales more gracefully |
+| **Token-based chunking** | DJL tokenizer splits on 512-token windows (64 overlap) instead of raw character counts — chunks stay within the embedding model's context |
+| **Hybrid retrieval + MMR rerank** | Keyword (BM25-style) + vector results fused via RRF with `min-similarity` 0.4; MMR (`mmr-lambda` 0.7) trades relevance for diversity, returning top-5 chunks |
+| **Metadata filters in retrieval** | `document_type` + date-range filters on the `documents` JOIN — retrieval stays scoped to the user's requested scope |
+| **Batched embeddings (cap 32)** | ONNX native memory grows with batch size; capping at 32 (and batching the demo reindexer the same way) prevents cgroup OOM kills in 2GiB containers |
+| **Embedding status tracking** | `embedding_status` (OK/FAILED) with NULL vectors for failures — no zero-vector poison in the index |
+| **Golden retrieval eval set** | `retrieval_eval_set.json` + `RagEvalIntegrationTest` (gated by `RUN_RAG_EVAL=true`) measures retrieval quality offline before chat prompts change |
+| **Reindex off by default** | `AI_REINDEX_ON_STARTUP=false` — demo reindexing is opt-in to avoid a 1445-chunk ONNX batch at boot |
 | **User isolation in RAG** | Filter `document_chunks` by `d.user_id` via JOIN to `documents` — prevents cross-user document leaks |
 | **Tess4J (offline OCR)** | Free, works without internet; can swap to cloud OCR later |
 | **PDFBox 3.x** | Apache license, mature, handles both extraction and generation |

@@ -57,7 +57,7 @@ finlyhub/
 │       ├── user/                # Profile CRUD, roles
 │       ├── invoice/             # Upload → OCR → AI extraction → approval
 │       ├── document/            # Upload → parse → chunk → embed → index
-│       ├── chatbot/             # Conversations, messages, RAG vector search
+│       ├── chatbot/             # Conversations, messages, RAG hybrid retrieval (RRF + MMR + filters)
 │       ├── transaction/         # CSV/XLSX import, AI categorization
 │       ├── reconciliation/      # Bank vs accounting matching
 │       ├── report/              # Aggregation, AI insights, PDF/Excel export
@@ -144,6 +144,7 @@ finlyhub/
 
 - **Backend tests** (JUnit 5 + Mockito) in `backend/src/test/java/`
 - **Frontend tests** (Vitest) in `frontend/src/api/__tests__/`
+- **Golden RAG eval**: `RagEvalIntegrationTest` runs only when `RUN_RAG_EVAL=true` against `retrieval_eval_set.json`
 - **Verification**: Run `docker compose up -d` and test endpoints via curl or the frontend.
 - **Demo users**: `admin@finlyhub.com`, `accountant@finlyhub.com`, `viewer@finlyhub.com` — all with password `password`.
 
@@ -160,3 +161,4 @@ finlyhub/
 | `Caused by: PSQLException: Bad value for type long` | Usually `@Lob` or column type mismatch | Check entity `@Column` definitions against actual DB types |
 | `No Spring profile active` | Seed data doesn't load | Set `SPRING_PROFILES_ACTIVE=demo` in docker-compose or Dockerfile |
 | `Entity name collision` | `DuplicateRegistrationException` at startup | Use `@Entity(name = "UniqueName")` to disambiguate |
+| Demo reindex OOM kills container | cgroup OOM kill with `AI_REINDEX_ON_STARTUP=true` | `OnnxBgeEmbeddingService.embedBatch` caps at 32; `DemoEmbeddingReindexer` batches too; keep `AI_REINDEX_ON_STARTUP=false` (default) | | |

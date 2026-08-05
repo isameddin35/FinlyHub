@@ -5,7 +5,7 @@ Modern, enterprise-grade SaaS platform that helps accountants automate repetitiv
 ## Features
 
 - **AI Invoice Processing** — Upload PDF/receipts; OCR extracts text, LLM structures data, human reviews & approves
-- **Accounting Copilot** — RAG chatbot that answers questions from your policy documents with source citations
+- **Accounting Copilot** — RAG chatbot that answers questions from your policy documents with source citations, hybrid keyword+vector retrieval, MMR reranking, and metadata filters
 - **Transaction Categorization** — AI-suggested categories for imported CSV/XLSX transactions with confidence scoring
 - **Financial Reports** — Generate revenue/expense/profit reports with charts and AI executive summaries
 - **Bank Reconciliation** — Match bank statements against accounting records with automatic discrepancy detection
@@ -16,7 +16,7 @@ Modern, enterprise-grade SaaS platform that helps accountants automate repetitiv
 |-------|-----------|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui, TanStack Query |
 | Backend | Java 21, Spring Boot 3.4, Spring Security, JWT, Spring Data JPA |
-| Database | PostgreSQL 16 + pgvector (384-dim, ivfflat index) |
+| Database | PostgreSQL 16 + pgvector (384-dim, HNSW index) |
 | AI Chat | Groq (llama-3.1-8b-instant) |
 | AI Embeddings | ONNX Runtime + DJL Tokenizers (bge-small-en-v1.5, 384-dim, in-JVM) |
 | OCR | Tesseract via Tess4J 5.12 |
@@ -100,6 +100,7 @@ See `.env.example` for all configurable variables. Key ones:
 | `JWT_EXPIRATION` | 86400000 | Access token TTL (ms) |
 | `JWT_REFRESH_EXPIRATION` | 604800000 | Refresh token TTL (ms) |
 | `AI_PROVIDER` | mock | `mock` (no key) or `openai` (Groq chat) |
+| `AI_REINDEX_ON_STARTUP` | false | Re-embed all demo document chunks on startup (batched at 32; keep off to avoid a large ONNX batch on 2GiB-limited containers) |
 | `OPENAI_API_KEY` | - | Groq API key (if provider is `openai`) |
 | `OPENAI_BASE_URL` | https://api.groq.com/openai/v1 | Groq-compatible API base URL |
 | `OPENAI_MODEL` | llama-3.1-8b-instant | Chat model |
