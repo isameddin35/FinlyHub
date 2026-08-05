@@ -1,7 +1,7 @@
 # FinlyHub — Production Readiness Task Tracker
 
 **Status**: MVP demo → Production hardening  
-**Last Updated**: 2026-07-24  
+**Last Updated**: 2026-08-04  
 **Target**: Investor demo → Production-ready SaaS
 
 ---
@@ -23,8 +23,8 @@
 |----|------|-------|--------|-------|
 | INFRA-001 | Add healthcheck to backend Dockerfile | | 🔄 | Deploy-time health check in `deploy.sh` (curl loop); Dockerfile HEALTHCHECK still PENDING |
 | INFRA-002 | Add healthcheck to frontend Dockerfile | | 🔄 | Deploy-time health check in `deploy.sh` (wget loop); Dockerfile HEALTHCHECK still PENDING |
-| INFRA-003 | Add resource limits (CPU/RAM) to all services in docker-compose.yml | | ⏳ | backend: 2CPU/2GB, ollama: 4GB, frontend: 0.5CPU/512MB |
-| INFRA-004 | Add `restart: unless-stopped` to all services | | ⏳ | Auto-recover from crashes |
+| INFRA-003 | Add resource limits (CPU/RAM) to all services in docker-compose.yml | | ✅ | Done — `deploy.resources.limits` on all 3 services (backend 2GiB mem, frontend 512MiB, postgres 512MiB) |
+| INFRA-004 | Add `restart: unless-stopped` to all services | | ✅ | Done — all 3 services |
 | INFRA-005 | Enable Spring Boot Actuator + Prometheus endpoint | | ⏳ | `management.endpoints.web.exposure.include=health,prometheus` |
 | INFRA-006 | Fix `VITE_API_URL` — runtime config via nginx `window.__ENV__` | | ⏳ | Remove build-time dependency |
 
@@ -89,7 +89,7 @@
 | ECS-004 | Create ECS services (backend: 2+ tasks, frontend: 2+ tasks) | | ⏳ | Fargate, platform version LATEST |
 | ECS-005 | Configure ALB (HTTPS, WAF, path routing `/api*` → backend, `/*` → frontend) | | ⏳ | ACM cert for custom domain |
 | ECS-006 | Implement blue/green or rolling deployment (CodeDeploy or ECS native) | | ⏳ | Zero-downtime deploys |
-| ECS-007 | Remove postgres/ollama from docker-compose; use RDS + ECS GPU task | | ⏳ | Ollama on `g5.xlarge` or Bedrock |
+| ECS-007 | Remove postgres from docker-compose; use RDS + optional GPU embeddings | | ⏳ | Embeddings are in-JVM ONNX; GPU/Bedrock optional at scale |
 | ECS-008 | Add CloudWatch log groups + retention (30 days) | | ⏳ | Structured JSON logs |
 
 ### P1 — Frontend Hosting
@@ -107,9 +107,9 @@
 
 | ID | Task | Owner | Status | Notes |
 |----|------|-------|--------|-------|
-| AI-001 | GPU-enabled Ollama on ECS (`g5.xlarge`, `ollama/ollama:rocm`) | | ⏳ | 10x faster embeddings |
+| AI-001 | GPU-accelerated embeddings (optional) | | ⏳ | Embeddings already in-JVM via ONNX (bge-small-en-v1.5); GPU or Bedrock is a scaling option, not required |
 | AI-002 | Or: Migrate to Bedrock (Titan Embeddings) / Vertex AI | | ⏳ | Zero-ops, but vendor lock-in |
-| AI-003 | Batch embedding requests (accumulate 10-50 docs) | | ⏳ | Reduce API calls |
+| AI-003 | Batch embedding requests (accumulate 10-50 docs) | | ✅ | Done — `OnnxBgeEmbeddingService.embedBatch` caps at 32; demo reindexer batches at 32 too |
 
 ### P1 — Async Queue
 
@@ -129,7 +129,7 @@
 | ID | Task | Owner | Status | Notes |
 |----|------|-------|--------|-------|
 | DB-001 | Add composite indexes for query patterns | | ⏳ | `EXPLAIN ANALYZE` on slow queries |
-| DB-002 | Create HNSW index on `document_chunks.embedding` | | ⏳ | `CREATE INDEX ... USING hnsw (embedding vector_cosine_ops)` |
+| DB-002 | Create HNSW index on `document_chunks.embedding` | | ✅ | Done — V020 replaces ivfflat with HNSW `(m=16, ef_construction=64)` |
 | DB-003 | Partition `audit_log` by month | | ⏳ | `pg_partman` or native partitioning |
 | DB-004 | Add connection pooler (PgBouncer) | | ⏳ | 100s app conns → 10 DB conns |
 | DB-005 | Enable `track_io_timing` + `pg_stat_statements` | | ⏳ | Query performance insights |
@@ -142,10 +142,10 @@
 
 | ID | Task | Owner | Status | Notes |
 |----|------|-------|--------|-------|
-| TEST-001 | Unit tests (Mockito) — target 70% coverage | | ⏳ | Services, mappers, utils |
+| TEST-001 | Unit tests (Mockito) — target 70% coverage | | 🔄 | 87 backend tests passing (incl. embedding batching + demo reindexer) |
 | TEST-002 | Integration tests (Testcontainers) — DB, AI, auth | | ⏳ | `@SpringBootTest` + Testcontainers |
 | TEST-003 | Contract tests (Pact) — API compatibility | | ⏳ | Frontend-backend contract |
-| TEST-004 | Frontend unit tests (Vitest + RTL) | | ⏳ | Components, hooks, utils |
+| TEST-004 | Frontend unit tests (Vitest + RTL) | | 🔄 | 103 tests passing |
 | TEST-005 | E2E tests (Playwright) — critical flows | | ⏳ | Login, invoice upload, chat, reports |
 | TEST-006 | Load test (k6/Gatling) — 1000 concurrent users | | ⏳ | Identify bottlenecks |
 
@@ -177,9 +177,9 @@
 
 | ID | Task | Effort | Impact |
 |----|------|--------|--------|
-| QW-001 | Add healthchecks to docker-compose | 15 min | High | 🟢 Done — deploy-time health checks in `deploy.sh` |
-| QW-002 | Add resource limits to docker-compose | 10 min | High |
-| QW-003 | Add restart policies | 5 min | High |
+| QW-001 | Add healthchecks to docker-compose | 15 min | High | 🟢 Done — deploy-time health checks in `deploy.sh` + compose healthchecks |
+| QW-002 | Add resource limits to docker-compose | 10 min | High | 🟢 Done — `deploy.resources.limits` on all services |
+| QW-003 | Add restart policies | 5 min | High | 🟢 Done — `restart: unless-stopped` on all services |
 | QW-004 | Enable Actuator + Prometheus | 30 min | High |
 | QW-005 | Increase Hikari pool to 20 | 5 min | Medium |
 | QW-006 | Fix `VITE_API_URL` runtime config | 1 hr | Medium |
@@ -211,6 +211,9 @@
 | 2026-07-24 | Bedrock over GPU Ollama | Zero-ops embeddings; accept vendor lock-in |
 | 2026-07-24 | CloudFront+S3 for frontend | Cheaper at scale, global CDN, no nginx ops |
 | 2026-07-24 | SQS for async queues | Managed, infinite scale, DLQ built-in |
+| 2026-08-04 | Hybrid retrieval (RRF keyword+vector) + MMR rerank + metadata filters | Better retrieval quality than pure vector similarity; MMR avoids redundant chunks; `retrieval_eval_set.json` measures regressions |
+| 2026-08-04 | HNSW over IVFFLAT | No list-count tuning; scales more gracefully (V020) |
+| 2026-08-04 | Batched ONNX embeddings (cap 32) + `AI_REINDEX_ON_STARTUP=false` | Bound ONNX native memory; demo reindexer OOM'd a 2GiB container at 1445-chunk batch |
 
 ---
 

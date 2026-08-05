@@ -39,3 +39,5 @@ databaseChangeLog:
       file: db/changelog/V019__rag_hybrid_search.yaml
   - include:
       file: db/changelog/V020__embedding_failures_and_hnsw.yaml
+  - include:
+      file: db/changelog/V021__reconciliation_evidence_text.yaml

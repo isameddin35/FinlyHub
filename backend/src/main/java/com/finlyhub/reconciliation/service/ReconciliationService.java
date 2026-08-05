@@ -2,8 +2,10 @@ package com.finlyhub.reconciliation.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.finlyhub.common.util.FileParsingUtils;
+import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.ResourceNotFoundException;
+import com.finlyhub.common.util.FileParsingUtils;
+import com.finlyhub.common.util.SecurityUtils;
 import com.finlyhub.reconciliation.dto.*;
 import com.finlyhub.reconciliation.entity.Reconciliation;
 import com.finlyhub.reconciliation.entity.Reconciliation.ReconciliationStatus;
@@ -47,6 +49,15 @@ public class ReconciliationService {
         PRIMARY, SECONDARY, TERTIARY
     }
 
+    private static final DateTimeFormatter[] DATE_FORMATTERS = {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+            DateTimeFormatter.ofPattern("MM-dd-yyyy"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy")
+    };
+
     public ReconciliationUploadResponse uploadAndMatch(
             MultipartFile bankFile,
             MultipartFile accountingFile,
@@ -58,8 +69,15 @@ public class ReconciliationService {
         List<String[]> bankRows = parseFile(bankFile);
         List<String[]> accountingRows = parseFile(accountingFile);
 
-        List<String[]> bankData = bankRows.size() > 1 ? bankRows.subList(1, bankRows.size()) : bankRows;
-        List<String[]> accountingData = accountingRows.size() > 1 ? accountingRows.subList(1, accountingRows.size()) : accountingRows;
+        List<String[]> bankData = stripHeader(bankRows);
+        List<String[]> accountingData = stripHeader(accountingRows);
+
+        if (bankData.isEmpty()) {
+            throw new BusinessException("No data rows found in bank statement file");
+        }
+        if (accountingData.isEmpty()) {
+            throw new BusinessException("No data rows found in accounting records file");
+        }
 
         Reconciliation reconciliation = new Reconciliation();
         User userRef = new User();
@@ -123,8 +141,7 @@ public class ReconciliationService {
 
     @Transactional(readOnly = true)
     public ReconciliationMatchResponse getReconciliationDetail(Long reconciliationId) {
-        Reconciliation reconciliation = reconciliationRepository.findById(reconciliationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reconciliation", reconciliationId));
+        Reconciliation reconciliation = findOwnedReconciliation(reconciliationId);
 
         List<ReconciliationEntry> allEntries = entryRepository.findByReconciliationId(reconciliationId);
 
@@ -152,12 +169,21 @@ public class ReconciliationService {
     }
 
     public void approveReconciliation(Long reconciliationId, Long userId) {
-        Reconciliation reconciliation = reconciliationRepository.findById(reconciliationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reconciliation", reconciliationId));
+        Reconciliation reconciliation = findOwnedReconciliation(reconciliationId);
         reconciliation.setStatus(ReconciliationStatus.APPROVED);
         reconciliation.setApprovedBy(userId);
         reconciliation.setApprovedAt(LocalDateTime.now());
         reconciliationRepository.save(reconciliation);
+    }
+
+    private Reconciliation findOwnedReconciliation(Long reconciliationId) {
+        Reconciliation reconciliation = reconciliationRepository.findById(reconciliationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reconciliation", reconciliationId));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (reconciliation.getUser() == null || !reconciliation.getUser().getId().equals(currentUserId)) {
+            throw new ResourceNotFoundException("Reconciliation", reconciliationId);
+        }
+        return reconciliation;
     }
 
     private void runMatching(List<ReconciliationEntry> bankEntries,
@@ -182,8 +208,11 @@ public class ReconciliationService {
                 bankEntry.setMatchedEntryId(bestMatch.getId());
                 bestMatch.setMatchedEntryId(bankEntry.getId());
 
-                bankEntry.setMatchStatus(MatchStatus.MATCHED);
-                bestMatch.setMatchStatus(MatchStatus.MATCHED);
+                MatchStatus matchStatus = bestMatchType == MatchType.TERTIARY
+                        ? MatchStatus.NEEDS_REVIEW
+                        : MatchStatus.MATCHED;
+                bankEntry.setMatchStatus(matchStatus);
+                bestMatch.setMatchStatus(matchStatus);
 
                 BigDecimal diff = bankEntry.getAmount().subtract(bestMatch.getAmount());
                 bankEntry.setAmountDifference(diff);
@@ -285,13 +314,7 @@ public class ReconciliationService {
 
         if (row.length > 0) entry.setDescription(row[0].trim());
         if (row.length > 1) {
-            LocalDate date = FileParsingUtils.parseDate(row[1].trim(),
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),
-                    DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-                    DateTimeFormatter.ofPattern("MM-dd-yyyy"),
-                    DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+            LocalDate date = FileParsingUtils.parseDate(row[1].trim(), DATE_FORMATTERS);
             entry.setTransactionDate(date != null ? date : LocalDate.now());
         }
         if (row.length > 2) {
@@ -303,6 +326,20 @@ public class ReconciliationService {
         }
 
         return entry;
+    }
+
+    private List<String[]> stripHeader(List<String[]> rows) {
+        if (rows.isEmpty()) return rows;
+        boolean hasHeader = isHeaderRow(rows.get(0));
+        if (rows.size() == 1) {
+            return hasHeader ? List.of() : rows;
+        }
+        return hasHeader ? rows.subList(1, rows.size()) : rows;
+    }
+
+    private boolean isHeaderRow(String[] row) {
+        if (row.length < 2) return true;
+        return FileParsingUtils.parseDate(row[1].trim(), DATE_FORMATTERS) == null;
     }
 
     private List<String[]> parseFile(MultipartFile file) throws IOException {
@@ -319,10 +356,34 @@ public class ReconciliationService {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (line.isBlank()) continue;
-                rows.add(line.split(","));
+                rows.add(splitCsvLine(line));
             }
         }
         return rows;
+    }
+
+    private String[] splitCsvLine(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (c == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    current.append('"');
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                fields.add(current.toString().trim());
+                current.setLength(0);
+            } else {
+                current.append(c);
+            }
+        }
+        fields.add(current.toString().trim());
+        return fields.toArray(new String[0]);
     }
 
     private List<String[]> parseXlsx(MultipartFile file) throws IOException {

@@ -46,6 +46,9 @@ See `ACCOUNTING_IMPROVEMENTS.md` glossary note at the bottom if terms are unfami
 
 ## Phase 5: RAG Copilot Improvements
 
+- [x] **Retrieval quality** — Token-based chunking, hybrid keyword+vector search (RRF fusion), MMR reranking, and metadata filters (see Phase 5 of `TASKS.md`)
+- [x] **Embedding reliability** — Batched ONNX embeddings (cap 32), `embedding_status` failure tracking, HNSW index replacing ivfflat
+- [x] **Offline retrieval eval** — `retrieval_eval_set.json` + `RagEvalIntegrationTest` (gated by `RUN_RAG_EVAL=true`)
 - [ ] **Ledger-grounded Q&A** — Answer questions about actual financial data (e.g. "biggest expense category last quarter") via structured query, not just uploaded documents
 
 ## Phase 6: New Features — Product Maturity
