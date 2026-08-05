@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { reportApi } from '@/api/reports'
-import type { ReportResponse } from '@/types/report'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, CartesianGrid } from 'recharts'
 
 const CSS = `
 .fhr-root{ font-family:'Inter', sans-serif; color:#1E293B; }
@@ -46,6 +46,16 @@ const CSS = `
   cursor:pointer; transition:background 0.15s ease;
 }
 .fhr-saved-item:hover{ background:#F8FAFC; }
+.fhr-saved-title{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.fhr-badge{
+  flex:none; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px;
+  letter-spacing:0.02em; text-transform:uppercase;
+}
+.fhr-badge-generating{ background:#FEF3C7; color:#B45309; }
+.fhr-badge-completed{ background:#DCFCE7; color:#15803D; }
+.fhr-badge-failed{ background:#FEE2E2; color:#B91C1C; }
+.fhr-badge-pending{ background:#F1F5F9; color:#64748B; }
 
 .fhr-preview{
   border-radius:18px; background:rgba(255,255,255,0.8); border:1px solid #E2E8F0;
@@ -56,17 +66,31 @@ const CSS = `
 .fhr-empty-title{ font-size:14.5px; font-weight:600; color:#475569; margin-bottom:4px; }
 .fhr-empty-sub{ font-size:12.5px; }
 
-.fhr-report{ width:100%; }
-.fhr-report-head{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:20px; }
+.fhr-report{ width:100%; align-self:flex-start; }
+.fhr-report-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
 .fhr-report-title{ font-family:'Poppins', sans-serif; font-weight:700; font-size:19px; color:#0F172A; }
 .fhr-report-range{ font-size:12.5px; color:#64748B; margin-top:4px; }
+.fhr-report-actions{ display:flex; gap:8px; }
+.fhr-export-btn{
+  padding:8px 14px; border-radius:10px; border:1px solid #E2E8F0; background:#fff;
+  font-size:12.5px; font-weight:600; color:#1E293B; cursor:pointer; transition:background 0.15s ease, border-color 0.15s ease;
+}
+.fhr-export-btn:hover{ background:#F8FAFC; border-color:#CBD5E1; }
 .fhr-report-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
 .fhr-report-stat{ padding:16px 18px; border-radius:14px; background:#F8FAFC; border:1px solid #F1F5F9; }
 .fhr-report-stat .fhr-rs-label{ font-size:11.5px; color:#64748B; margin-bottom:6px; }
 .fhr-report-stat .fhr-rs-value{ font-family:'JetBrains Mono', monospace; font-weight:700; font-size:18px; color:#0F172A; }
+.fhr-report-section{ margin-top:20px; }
+.fhr-report-section h4{ font-family:'Poppins', sans-serif; font-weight:600; font-size:13.5px; color:#0F172A; margin-bottom:10px; }
 .fhr-spinner{ display:flex; justify-content:center; padding:30px 0; }
 .fhr-spinner:after{ content:''; width:24px; height:24px; border:3px solid #E2E8F0; border-top-color:#2563EB; border-radius:50%; animation:fhr-spin 0.6s linear infinite; }
 @keyframes fhr-spin{ to{ transform:rotate(360deg); } }
+.fhr-failed{ text-align:center; color:#B91C1C; font-size:13.5px; font-weight:600; }
+
+.fhr-ai{
+  margin-top:20px; padding:16px; border-radius:14px; background:#EFF6FF;
+  border:1px solid rgba(37,99,235,0.2); font-size:13px; color:#1E40AF; line-height:1.6; white-space:pre-line;
+}
 
 @media (max-width:900px){ .fhr-layout{ grid-template-columns:1fr; } }
 
@@ -80,29 +104,48 @@ const CSS = `
 .dark .fhr-report-stat .fhr-rs-value{ color:#F1F5F9; }
 .dark .fhr-report-title{ color:#F1F5F9; }
 .dark .fhr-report-range{ color:#94A3B8; }
+.dark .fhr-report-section h4{ color:#F1F5F9; }
 .dark .fhr-header h2{ color:#F1F5F9; }
 .dark .fhr-empty-title{ color:#94A3B8; }
+.dark .fhr-saved-item{ border-color:#334155; color:#E2E8F0; }
+.dark .fhr-saved-item:hover{ background:#1E293B; }
+.dark .fhr-export-btn{ background:#1E293B; border-color:#334155; color:#E2E8F0; }
+.dark .fhr-export-btn:hover{ background:#0F172A; }
 `;
 
 const REPORT_TYPES = [
-  { value: "PROFIT_LOSS", label: "Profit & Loss" },
+  { value: "PROFIT", label: "Profit & Loss" },
   { value: "BALANCE_SHEET", label: "Balance Sheet" },
-  { value: "CASH_FLOW", label: "Cash Flow" },
+  { value: "CASHFLOW", label: "Cash Flow" },
   { value: "EXPENSE", label: "Expense Report" },
+  { value: "REVENUE", label: "Revenue Report" },
 ];
 
 const TYPE_SUBTYPES: Record<string, string[]> = {
-  PROFIT_LOSS: ["monthly", "quarterly", "annual"],
-  BALANCE_SHEET: ["monthly", "quarterly", "annual"],
-  CASH_FLOW: ["operating", "investing", "financing"],
-  EXPENSE: ["by_category", "by_vendor", "by_month"],
+  PROFIT: ["MONTHLY", "QUARTERLY", "ANNUAL"],
+  BALANCE_SHEET: ["MONTHLY", "QUARTERLY", "ANNUAL"],
+  CASHFLOW: ["MONTHLY", "QUARTERLY", "ANNUAL"],
+  EXPENSE: ["MONTHLY", "QUARTERLY", "ANNUAL", "CATEGORY", "VENDOR", "DEPARTMENT"],
+  REVENUE: ["MONTHLY", "QUARTERLY", "ANNUAL", "CATEGORY", "VENDOR", "DEPARTMENT"],
 };
 
 const SUBTYPE_LABEL: Record<string, string> = {
-  monthly: "Monthly", quarterly: "Quarterly", annual: "Annual",
-  operating: "Operating", investing: "Investing", financing: "Financing",
-  by_category: "By Category", by_vendor: "By Vendor", by_month: "By Month",
+  MONTHLY: "Monthly", QUARTERLY: "Quarterly", ANNUAL: "Annual",
+  CATEGORY: "By Category", VENDOR: "By Vendor", DEPARTMENT: "By Department",
 };
+
+const CHART_COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1"];
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  PENDING: "fhr-badge-pending",
+  GENERATING: "fhr-badge-generating",
+  COMPLETED: "fhr-badge-completed",
+  FAILED: "fhr-badge-failed",
+};
+
+const formatMoney = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
+const prettyKey = (key: string) => key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim();
 
 export function FinlyHubReports() {
   const queryClient = useQueryClient()
@@ -110,9 +153,9 @@ export function FinlyHubReports() {
   const [subtype, setSubtype] = useState("");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [selectedReport, setSelectedReport] = useState<ReportResponse | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  const canGenerate = type && periodStart && periodEnd;
+  const canGenerate = type && subtype && periodStart && periodEnd;
 
   const { data: savedReports } = useQuery({
     queryKey: ['reports'],
@@ -120,6 +163,17 @@ export function FinlyHubReports() {
       const res = await reportApi.list()
       return res.data.data
     },
+    refetchInterval: (query) => (query.state.data?.some((r) => r.status === 'GENERATING') ? 3000 : false),
+  })
+
+  const { data: selectedReport, isFetching } = useQuery({
+    queryKey: ['report', selectedId],
+    queryFn: async () => {
+      const res = await reportApi.getById(selectedId!)
+      return res.data.data
+    },
+    enabled: selectedId != null,
+    refetchInterval: (query) => (query.state.data?.status === 'GENERATING' ? 2500 : false),
   })
 
   const generateMutation = useMutation({
@@ -131,17 +185,52 @@ export function FinlyHubReports() {
     }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['reports'] })
-      toast.success('Report generated')
-      setSelectedReport(res.data.data)
+      setSelectedId(res.data.data.id)
+      toast.success('Report generation started')
     },
     onError: () => toast.error('Failed to generate report'),
   })
 
-  const fetchReportMutation = useMutation({
-    mutationFn: (id: number) => reportApi.getById(id),
-    onSuccess: (res) => setSelectedReport(res.data.data),
-    onError: () => toast.error('Failed to load report'),
-  })
+  const handleExport = async (format: string) => {
+    if (selectedId == null) return
+    try {
+      const res = await reportApi.export(selectedId, format)
+      const url = URL.createObjectURL(res.data as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report_${selectedId}.${format.toLowerCase()}`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Report exported')
+    } catch {
+      toast.error('Export failed')
+    }
+  }
+
+  const chartData = selectedReport?.chartConfig
+    ? selectedReport.chartConfig.labels.map((label, i) => ({
+        name: label,
+        value: selectedReport.chartConfig!.datasets[0]?.data[i] ?? 0,
+      }))
+    : [];
+
+  const statCards: { key: string; value: number }[] = [];
+  if (selectedReport?.data) {
+    for (const [key, value] of Object.entries(selectedReport.data)) {
+      if (key === 'labels' || key === 'values' || key === 'totals') continue;
+      if (typeof value === 'number') statCards.push({ key, value });
+    }
+    const totals = selectedReport.data.totals as Record<string, unknown> | undefined;
+    if (totals && typeof totals.total === 'number') {
+      statCards.push({ key: 'Total', value: totals.total });
+    }
+    if (totals && typeof totals.average === 'number') {
+      statCards.push({ key: 'Average', value: totals.average });
+    }
+    if (totals && typeof totals.count === 'number') {
+      statCards.push({ key: 'Transactions', value: totals.count });
+    }
+  }
 
   return (
     <div className="fhr-root">
@@ -187,8 +276,9 @@ export function FinlyHubReports() {
               <div className="fhr-saved-empty">No reports yet</div>
             ) : (
               savedReports.map((r) => (
-                <div className="fhr-saved-item" key={r.id} onClick={() => fetchReportMutation.mutate(r.id)}>
-                  {r.title || `${r.type} — ${r.periodStart} to ${r.periodEnd}`}
+                <div className="fhr-saved-item" key={r.id} onClick={() => setSelectedId(r.id)}>
+                  <span className="fhr-saved-title">{r.title || `${r.type} — ${r.periodStart} to ${r.periodEnd}`}</span>
+                  <span className={`fhr-badge ${STATUS_BADGE_CLASS[r.status] || 'fhr-badge-pending'}`}>{r.status}</span>
                 </div>
               ))
             )}
@@ -196,13 +286,35 @@ export function FinlyHubReports() {
         </div>
 
         <div className="fhr-preview">
-          {fetchReportMutation.isPending || generateMutation.isPending ? (
+          {generateMutation.isPending || (selectedId != null && isFetching && !selectedReport) ? (
             <div className="fhr-spinner" />
           ) : !selectedReport ? (
             <div className="fhr-empty">
               <svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4M9 12.5h6M9 15.8h6" /></svg>
               <div className="fhr-empty-title">No report selected</div>
               <div className="fhr-empty-sub">Generate a report to get started</div>
+            </div>
+          ) : selectedReport.status === 'GENERATING' || selectedReport.status === 'PENDING' ? (
+            <div className="fhr-report">
+              <div className="fhr-report-head">
+                <div>
+                  <div className="fhr-report-title">{selectedReport.title}</div>
+                  <div className="fhr-report-range">{selectedReport.periodStart} → {selectedReport.periodEnd}</div>
+                </div>
+                <span className={`fhr-badge ${STATUS_BADGE_CLASS[selectedReport.status] || 'fhr-badge-pending'}`}>{selectedReport.status}</span>
+              </div>
+              <div className="fhr-spinner" />
+            </div>
+          ) : selectedReport.status === 'FAILED' ? (
+            <div className="fhr-report">
+              <div className="fhr-report-head">
+                <div>
+                  <div className="fhr-report-title">{selectedReport.title}</div>
+                  <div className="fhr-report-range">{selectedReport.periodStart} → {selectedReport.periodEnd}</div>
+                </div>
+                <span className="fhr-badge fhr-badge-failed">FAILED</span>
+              </div>
+              <div className="fhr-failed">Report generation failed. Try generating it again.</div>
             </div>
           ) : (
             <div className="fhr-report">
@@ -211,17 +323,47 @@ export function FinlyHubReports() {
                   <div className="fhr-report-title">{selectedReport.title}</div>
                   <div className="fhr-report-range">{selectedReport.periodStart} → {selectedReport.periodEnd}</div>
                 </div>
+                <div className="fhr-report-actions">
+                  <button type="button" className="fhr-export-btn" onClick={() => handleExport('PDF')}>Export PDF</button>
+                  <button type="button" className="fhr-export-btn" onClick={() => handleExport('EXCEL')}>Export Excel</button>
+                </div>
               </div>
-              <div className="fhr-report-grid">
-                {Object.entries(selectedReport.data || {}).slice(0, 3).map(([key, value]) => (
-                  <div className="fhr-report-stat" key={key}>
-                    <div className="fhr-rs-label">{key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}</div>
-                    <div className="fhr-rs-value">{typeof value === 'number' ? `$${value.toLocaleString()}` : String(value)}</div>
-                  </div>
-                ))}
-              </div>
+
+              {statCards.length > 0 && (
+                <div className="fhr-report-grid">
+                  {statCards.map((s) => (
+                    <div className="fhr-report-stat" key={s.key}>
+                      <div className="fhr-rs-label">{prettyKey(s.key)}</div>
+                      <div className="fhr-rs-value">{s.key === 'Transactions' || s.key === 'Count' ? s.value.toLocaleString() : formatMoney(s.value)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedReport.chartConfig && chartData.length > 0 && (
+                <div className="fhr-report-section">
+                  <h4>{selectedReport.chartConfig.type === 'pie' ? 'Breakdown' : 'Trend'}</h4>
+                  {selectedReport.chartConfig.type === 'pie' ? (
+                    <PieChart width={560} height={260}>
+                      <Pie data={chartData} dataKey="value" nameKey="name" outerRadius={100} label={(e: any) => e.name}>
+                        {chartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(v) => formatMoney(Number(v))} />
+                    </PieChart>
+                  ) : (
+                    <BarChart width={560} height={260} data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B' }} />
+                      <YAxis tick={{ fontSize: 11, fill: '#64748B' }} />
+                      <Tooltip formatter={(v) => formatMoney(Number(v))} />
+                      <Bar dataKey="value" fill="#2563EB" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  )}
+                </div>
+              )}
+
               {selectedReport.aiInsights && (
-                <div style={{ marginTop: 20, padding: 16, borderRadius: 14, background: '#EFF6FF', border: '1px solid rgba(37,99,235,0.2)', fontSize: 13, color: '#1E40AF' }}>
+                <div className="fhr-ai">
                   {selectedReport.aiInsights}
                 </div>
               )}

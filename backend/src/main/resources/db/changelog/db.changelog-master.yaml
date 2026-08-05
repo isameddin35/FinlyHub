@@ -41,3 +41,5 @@ databaseChangeLog:
       file: db/changelog/V020__embedding_failures_and_hnsw.yaml
   - include:
       file: db/changelog/V021__reconciliation_evidence_text.yaml
+  - include:
+      file: db/changelog/V022__report_columns_text.yaml

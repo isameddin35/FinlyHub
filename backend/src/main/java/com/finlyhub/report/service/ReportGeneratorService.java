@@ -121,15 +121,13 @@ public class ReportGeneratorService {
                 .collect(Collectors.toList());
     }
 
-    public ReportResponse getReportById(Long reportId) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResourceNotFoundException("Report", reportId));
+    public ReportResponse getReportById(Long userId, Long reportId) {
+        Report report = findOwnedReport(userId, reportId);
         return toResponse(report);
     }
 
-    public byte[] exportReport(Long reportId, String format) {
-        Report report = reportRepository.findById(reportId)
-                .orElseThrow(() -> new ResourceNotFoundException("Report", reportId));
+    public byte[] exportReport(Long userId, Long reportId, String format) {
+        Report report = findOwnedReport(userId, reportId);
 
         return switch (format.toUpperCase()) {
             case "PDF" -> exportToPdf(report);
@@ -138,8 +136,36 @@ public class ReportGeneratorService {
         };
     }
 
+    private Report findOwnedReport(Long userId, Long reportId) {
+        Report report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResourceNotFoundException("Report", reportId));
+        if (report.getUser() == null || !report.getUser().getId().equals(userId)) {
+            throw new ResourceNotFoundException("Report", reportId);
+        }
+        return report;
+    }
+
     private Map<String, Object> aggregateData(List<Transaction> transactions, ReportRequest request) {
         Map<String, Object> data = new LinkedHashMap<>();
+
+        if (request.getType() == ReportType.PROFIT) {
+            Map<Boolean, List<Transaction>> partitioned = transactions.stream()
+                    .collect(Collectors.partitioningBy(t -> t.getTransactionType() == TransactionType.REVENUE));
+            List<Transaction> revenues = partitioned.get(true);
+            List<Transaction> expenses = partitioned.get(false);
+            BigDecimal totalRevenue = revenues.stream()
+                    .map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalExpense = expenses.stream()
+                    .map(t -> t.getAmount().abs()).reduce(BigDecimal.ZERO, BigDecimal::add);
+            data.put("totalRevenue", totalRevenue);
+            data.put("totalExpense", totalExpense);
+            data.put("netProfit", totalRevenue.subtract(totalExpense));
+            return data;
+        }
+
+        if (request.getType() == ReportType.BALANCE_SHEET) {
+            return aggregateBalanceSheet(transactions, request);
+        }
 
         if (request.getType() == ReportType.REVENUE) {
             transactions = transactions.stream()
@@ -149,19 +175,6 @@ public class ReportGeneratorService {
             transactions = transactions.stream()
                     .filter(t -> t.getTransactionType() == TransactionType.EXPENSE)
                     .collect(Collectors.toList());
-        } else if (request.getType() == ReportType.PROFIT) {
-            Map<Boolean, List<Transaction>> partitioned = transactions.stream()
-                    .collect(Collectors.partitioningBy(t -> t.getTransactionType() == TransactionType.REVENUE));
-            List<Transaction> revenues = partitioned.get(true);
-            List<Transaction> expenses = partitioned.get(false);
-            BigDecimal totalRevenue = revenues.stream()
-                    .map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal totalExpense = expenses.stream()
-                    .map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-            data.put("totalRevenue", totalRevenue);
-            data.put("totalExpense", totalExpense);
-            data.put("netProfit", totalRevenue.subtract(totalExpense));
-            return data;
         }
 
         List<String> labels = new ArrayList<>();
@@ -251,6 +264,40 @@ public class ReportGeneratorService {
         totals.put("count", transactions.size());
         data.put("totals", totals);
 
+        return data;
+    }
+
+    private Map<String, Object> aggregateBalanceSheet(List<Transaction> transactions, ReportRequest request) {
+        Map<String, BigDecimal> nets = switch (request.getSubtype()) {
+            case MONTHLY -> transactions.stream().collect(Collectors.groupingBy(
+                    t -> t.getTransactionDate().format(DateTimeFormatter.ofPattern("yyyy-MM")), TreeMap::new,
+                    Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)));
+            case QUARTERLY -> transactions.stream().collect(Collectors.groupingBy(
+                    t -> {
+                        int quarter = (t.getTransactionDate().getMonthValue() - 1) / 3 + 1;
+                        return t.getTransactionDate().getYear() + "-Q" + quarter;
+                    }, TreeMap::new,
+                    Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)));
+            default -> transactions.stream().collect(Collectors.groupingBy(
+                    t -> String.valueOf(t.getTransactionDate().getYear()), TreeMap::new,
+                    Collectors.reducing(BigDecimal.ZERO, Transaction::getAmount, BigDecimal::add)));
+        };
+
+        List<String> labels = new ArrayList<>();
+        List<Double> values = new ArrayList<>();
+        BigDecimal running = BigDecimal.ZERO;
+        for (Map.Entry<String, BigDecimal> entry : nets.entrySet()) {
+            labels.add(entry.getKey());
+            running = running.add(entry.getValue());
+            values.add(running.doubleValue());
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("labels", labels);
+        data.put("values", values);
+        data.put("totalAssets", running);
+        data.put("totalEquity", running);
+        data.put("totalLiabilities", BigDecimal.ZERO);
         return data;
     }
 
@@ -356,19 +403,19 @@ public class ReportGeneratorService {
                 cs.setFont(helveticaBold, 18);
                 cs.beginText();
                 cs.newLineAtOffset(50, 750);
-                cs.showText(report.getTitle());
+                cs.showText(sanitizePdfText(report.getTitle()));
                 cs.endText();
 
                 cs.setFont(helvetica, 11);
                 cs.beginText();
                 cs.newLineAtOffset(50, 720);
-                cs.showText("Type: " + report.getType() + "  Subtype: " + report.getSubtype());
+                cs.showText(sanitizePdfText("Type: " + report.getType() + "  Subtype: " + report.getSubtype()));
                 cs.newLineAtOffset(0, -20);
-                cs.showText("Period: " + report.getPeriodStart() + " to " + report.getPeriodEnd());
+                cs.showText(sanitizePdfText("Period: " + report.getPeriodStart() + " to " + report.getPeriodEnd()));
                 cs.newLineAtOffset(0, -20);
-                cs.showText("Status: " + report.getStatus());
+                cs.showText(sanitizePdfText("Status: " + report.getStatus()));
                 cs.newLineAtOffset(0, -20);
-                cs.showText("Generated: " + report.getCreatedAt());
+                cs.showText(sanitizePdfText("Generated: " + report.getCreatedAt()));
                 cs.newLineAtOffset(0, -30);
 
                 if (report.getAiInsights() != null) {
@@ -376,7 +423,7 @@ public class ReportGeneratorService {
                     cs.showText("AI Insights:");
                     cs.newLineAtOffset(0, -20);
                     cs.setFont(helvetica, 11);
-                    String insights = report.getAiInsights();
+                    String insights = sanitizePdfText(report.getAiInsights());
                     int lineLen = 90;
                     for (int i = 0; i < insights.length(); i += lineLen) {
                         int end = Math.min(i + lineLen, insights.length());
@@ -392,6 +439,33 @@ public class ReportGeneratorService {
         } catch (IOException e) {
             throw new BusinessException("Failed to generate PDF");
         }
+    }
+
+    private String sanitizePdfText(String text) {
+        if (text == null) return "";
+        StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\r' || c == '\n') {
+                sb.append(' ');
+            } else if (Character.isISOControl(c)) {
+                continue;
+            } else if (c <= 0xFF || isWinAnsiSymbol(c)) {
+                sb.append(c);
+            } else {
+                sb.append('?');
+            }
+        }
+        return sb.toString();
+    }
+
+    private boolean isWinAnsiSymbol(char c) {
+        return switch (c) {
+            case 0x2013, 0x2014, 0x2018, 0x2019, 0x201A, 0x201C, 0x201D, 0x201E, 0x2020, 0x2021,
+                    0x2022, 0x2026, 0x2030, 0x2039, 0x203A, 0x20AC, 0x2122, 0x0152, 0x0153,
+                    0x0160, 0x0161, 0x0178, 0x017D, 0x017E, 0x0174, 0x0175, 0x0192, 0x02C6, 0x02DC -> true;
+            default -> false;
+        };
     }
 
     private byte[] exportToExcel(Report report) {
