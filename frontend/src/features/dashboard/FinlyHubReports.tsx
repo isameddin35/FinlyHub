@@ -173,11 +173,11 @@ function buildStatCards(data: Record<string, unknown>): StatCard[] {
   return cards;
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: Readonly<{ status: string }>) {
   return <span className={`fhr-badge ${STATUS_BADGE_CLASS[status] || 'fhr-badge-pending'}`}>{status}</span>;
 }
 
-function ReportHead({ report, actions }: { report: ReportResponse | ReportSummaryResponse; actions?: React.ReactNode }) {
+function ReportHead({ report, actions }: Readonly<{ report: ReportResponse | ReportSummaryResponse; actions?: React.ReactNode }>) {
   return (
     <div className="fhr-report-head">
       <div>
@@ -189,7 +189,7 @@ function ReportHead({ report, actions }: { report: ReportResponse | ReportSummar
   );
 }
 
-function SavedReportsList({ reports, onSelect }: { reports: ReportSummaryResponse[]; onSelect: (id: number) => void }) {
+function SavedReportsList({ reports, onSelect }: Readonly<{ reports: ReportSummaryResponse[]; onSelect: (id: number) => void }>) {
   if (!reports || reports.length === 0) {
     return <div className="fhr-saved-empty">No reports yet</div>;
   }
@@ -205,7 +205,7 @@ function SavedReportsList({ reports, onSelect }: { reports: ReportSummaryRespons
   );
 }
 
-function ReportStatCards({ data }: { data: Record<string, unknown> }) {
+function ReportStatCards({ data }: Readonly<{ data: Record<string, unknown> }>) {
   const cards = buildStatCards(data);
   if (cards.length === 0) return null;
   return (
@@ -220,7 +220,7 @@ function ReportStatCards({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-function ReportChart({ chartConfig, chartData }: { chartConfig: ReportChartConfig; chartData: ChartDatum[] }) {
+function ReportChart({ chartConfig, chartData }: Readonly<{ chartConfig: ReportChartConfig; chartData: ChartDatum[] }>) {
   if (chartData.length === 0) return null;
   return (
     <div className="fhr-report-section">
@@ -245,7 +245,7 @@ function ReportChart({ chartConfig, chartData }: { chartConfig: ReportChartConfi
   );
 }
 
-function ReportPreview({ loading, report, onExport }: { loading: boolean; report: ReportResponse | undefined; onExport: (format: string) => void }) {
+function ReportPreview({ loading, report, onExport }: Readonly<{ loading: boolean; report: ReportResponse | undefined; onExport: (format: string) => void }>) {
   if (loading) {
     return <div className="fhr-spinner" />;
   }
