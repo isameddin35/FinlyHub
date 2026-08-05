@@ -8,10 +8,10 @@ export interface ReportRequest {
 
 export interface ReportChartConfig {
   type: 'bar' | 'pie'
-  labels: string[]
+  labels: string[] | null
   datasets: {
     label: string
-    data: number[]
+    data: number[] | null
     backgroundColor?: string[]
   }[]
 }

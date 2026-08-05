@@ -207,10 +207,10 @@ export function FinlyHubReports() {
     }
   }
 
-  const chartData = selectedReport?.chartConfig
+  const chartData = selectedReport?.chartConfig?.labels
     ? selectedReport.chartConfig.labels.map((label, i) => ({
         name: label,
-        value: selectedReport.chartConfig!.datasets[0]?.data[i] ?? 0,
+        value: selectedReport.chartConfig!.datasets[0]?.data?.[i] ?? 0,
       }))
     : [];
 

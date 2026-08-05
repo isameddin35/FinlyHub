@@ -178,7 +178,30 @@ describe('FinlyHubReports', () => {
     })
   })
 
-  it('renders a chart when chartConfig is present', async () => {
+  it('renders stat cards without a chart when chartConfig.labels is null', async () => {
+    vi.mocked(reportApi.list).mockResolvedValue(mockApiResponse([mockReportSummary({ type: 'PROFIT' })]))
+    vi.mocked(reportApi.getById).mockResolvedValue(mockApiResponse(mockReport({
+      chartConfig: {
+        type: 'bar',
+        labels: null,
+        datasets: [{ label: 'PROFIT', data: null }],
+      },
+    })))
+    renderWithQuery(<FinlyHubReports />)
+    await waitFor(() => {
+      expect(screen.getByText('P&L Q1 2026')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('P&L Q1 2026'))
+    await waitFor(() => {
+      expect(screen.getByText('Total Revenue')).toBeTruthy()
+      expect(screen.getByText('Total Expense')).toBeTruthy()
+      expect(screen.getByText('Net Profit')).toBeTruthy()
+      expect(screen.queryByText('Trend')).toBeNull()
+    })
+    expect(document.querySelector('.recharts-surface')).toBeNull()
+  })
+
+  it('shows a chart when chartConfig is present', async () => {
     vi.mocked(reportApi.list).mockResolvedValue(mockApiResponse([mockReportSummary()]))
     vi.mocked(reportApi.getById).mockResolvedValue(mockApiResponse(mockReport({
       chartConfig: {

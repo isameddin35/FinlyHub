@@ -104,7 +104,9 @@ public class ReportGeneratorService {
 
             report.setData(objectMapper.writeValueAsString(reportData));
             report.setAiInsights(aiInsights);
-            report.setChartConfig(objectMapper.writeValueAsString(chartConfig));
+            if (chartConfig != null) {
+                report.setChartConfig(objectMapper.writeValueAsString(chartConfig));
+            }
             report.setStatus(ReportStatus.COMPLETED);
             reportRepository.save(report);
         } catch (Exception e) {
@@ -321,6 +323,10 @@ public class ReportGeneratorService {
     }
 
     private Map<String, Object> generateChartConfig(Map<String, Object> reportData, ReportRequest request) {
+        if (reportData.get("labels") == null) {
+            return null;
+        }
+
         Map<String, Object> chartConfig = new LinkedHashMap<>();
 
         String chartType = switch (request.getSubtype()) {
