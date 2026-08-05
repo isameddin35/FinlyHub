@@ -53,7 +53,7 @@ public class ReconciliationEntry {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "match_status", length = 20)
-    private MatchStatus matchStatus;
+    private MatchStatus matchStatus = MatchStatus.UNMATCHED;
 
     @Column(name = "match_score", precision = 5, scale = 2)
     private BigDecimal matchScore;

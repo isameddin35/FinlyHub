@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - changeSet:
+      id: V021-1
+      author: finlyhub
+      changes:
+        - sql:
+            sql: ALTER TABLE reconciliation_entries ALTER COLUMN match_evidence TYPE TEXT USING match_evidence::text
