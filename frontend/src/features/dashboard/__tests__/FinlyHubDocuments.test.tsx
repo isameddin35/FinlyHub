@@ -113,4 +113,14 @@ describe('FinlyHubDocuments', () => {
       expect(screen.getByText('Parsing failed')).toBeTruthy()
     })
   })
+
+  it('shows indexing progress for processing documents', async () => {
+    vi.mocked(documentApi.list).mockResolvedValue(mockApiResponse([
+      mockDoc({ id: 1, status: 'PROCESSING', totalChunks: 10, indexedChunks: 4 }),
+    ]))
+    renderWithQuery(<FinlyHubDocuments />)
+    await waitFor(() => {
+      expect(screen.getByText('40%')).toBeTruthy()
+    })
+  })
 })

@@ -79,7 +79,7 @@ describe('FinlyHubReports', () => {
     vi.mocked(reportApi.list).mockResolvedValue(mockApiResponse([]))
     renderWithQuery(<FinlyHubReports />)
     await waitFor(() => {
-      expect(screen.getAllByText('Generate Report').length).toBe(2)
+      expect(screen.getAllByText('Generate Report')).toHaveLength(2)
       expect(screen.getByText('Report Type')).toBeTruthy()
       expect(screen.getByText('Balance Sheet')).toBeTruthy()
       expect(screen.getByText('Start Date')).toBeTruthy()
@@ -238,7 +238,7 @@ describe('FinlyHubReports', () => {
     vi.mocked(reportApi.list).mockResolvedValue(mockApiResponse([]))
     renderWithQuery(<FinlyHubReports />)
     await waitFor(() => {
-      expect(screen.getAllByText('Generate Report').length).toBe(2)
+      expect(screen.getAllByText('Generate Report')).toHaveLength(2)
     })
   })
 })

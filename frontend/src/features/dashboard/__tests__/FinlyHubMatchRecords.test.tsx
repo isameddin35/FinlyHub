@@ -54,19 +54,16 @@ describe('FinlyHubMatchRecords', () => {
     expect(spinner).toBeTruthy()
   })
 
-  it('renders the header', async () => {
+  it.each([
+    ['Reconciliation', 'renders the header'],
+    ['No reconciliations yet.', 'shows empty state when no reconciliations'],
+    ['Previous Reconciliations', 'renders previous reconciliations section'],
+    ['Download CSV template', 'renders the CSV template download link'],
+  ])('renders "%s" when %s', async (text, _label) => {
     vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([]))
     renderWithQuery(<FinlyHubMatchRecords />)
     await waitFor(() => {
-      expect(screen.getByText('Reconciliation')).toBeTruthy()
-    })
-  })
-
-  it('shows empty state when no reconciliations', async () => {
-    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([]))
-    renderWithQuery(<FinlyHubMatchRecords />)
-    await waitFor(() => {
-      expect(screen.getByText('No reconciliations yet.')).toBeTruthy()
+      expect(screen.getByText(text)).toBeTruthy()
     })
   })
 
@@ -101,22 +98,6 @@ describe('FinlyHubMatchRecords', () => {
       expect(screen.getByText('Title')).toBeTruthy()
       expect(screen.getByText('Period Start')).toBeTruthy()
       expect(screen.getByText('Period End')).toBeTruthy()
-    })
-  })
-
-  it('renders previous reconciliations section', async () => {
-    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([]))
-    renderWithQuery(<FinlyHubMatchRecords />)
-    await waitFor(() => {
-      expect(screen.getByText('Previous Reconciliations')).toBeTruthy()
-    })
-  })
-
-  it('renders the CSV template download link', async () => {
-    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([]))
-    renderWithQuery(<FinlyHubMatchRecords />)
-    await waitFor(() => {
-      expect(screen.getByText('Download CSV template')).toBeTruthy()
     })
   })
 
@@ -173,7 +154,7 @@ describe('FinlyHubMatchRecords', () => {
 
   it('hides the approve button for already-approved reconciliations', async () => {
     vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([mockRecon({ id: 1, title: 'Jan 2026', status: 'APPROVED' })]))
-    vi.mocked(reconciliationApi.getById).mockResolvedValue(mockApiResponse(mockDetail({ status: 'APPROVED' })))
+    vi.mocked(reconciliationApi.getById).mockResolvedValue(mockApiResponse(mockDetail({ reconciliation: mockRecon({ status: 'APPROVED' }) })))
     renderWithQuery(<FinlyHubMatchRecords />)
     await waitFor(() => {
       expect(screen.getByText('Jan 2026')).toBeTruthy()
@@ -207,6 +188,78 @@ describe('FinlyHubMatchRecords', () => {
       expect(toast.error).toHaveBeenCalledWith('No data rows found in bank statement file')
     })
   })
+
+  it('marks a positive difference green on matched pairs', async () => {
+    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([mockRecon({ id: 1, title: 'Jan 2026' })]))
+    vi.mocked(reconciliationApi.getById).mockResolvedValue(mockApiResponse(mockDetail({
+      matched: [
+        mockEntry({ id: 1, source: 'BANK', description: 'Acme Co', amountDifference: 5, matchScore: 0.95, matchedEntryId: 2 }),
+        mockEntry({ id: 2, source: 'ACCOUNTING', description: 'Acme Co', matchedEntryId: 1 }),
+      ],
+    })))
+    renderWithQuery(<FinlyHubMatchRecords />)
+    await waitFor(() => {
+      expect(screen.getByText('Jan 2026')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('Jan 2026'))
+    await waitFor(() => {
+      const diff = document.querySelector('.fhm-pair-diff')
+      expect(diff?.classList.contains('fhm-diff-pos')).toBe(true)
+      expect(diff?.classList.contains('fhm-diff-neg')).toBe(false)
+    })
+  })
+
+  it('marks a negative difference red on matched pairs', async () => {
+    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([mockRecon({ id: 1, title: 'Jan 2026' })]))
+    vi.mocked(reconciliationApi.getById).mockResolvedValue(mockApiResponse(mockDetail({
+      matched: [
+        mockEntry({ id: 1, source: 'BANK', description: 'Acme Co', amountDifference: -5, matchScore: 0.95, matchedEntryId: 2 }),
+        mockEntry({ id: 2, source: 'ACCOUNTING', description: 'Acme Co', matchedEntryId: 1 }),
+      ],
+    })))
+    renderWithQuery(<FinlyHubMatchRecords />)
+    await waitFor(() => {
+      expect(screen.getByText('Jan 2026')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('Jan 2026'))
+    await waitFor(() => {
+      const diff = document.querySelector('.fhm-pair-diff')
+      expect(diff?.classList.contains('fhm-diff-neg')).toBe(true)
+      expect(diff?.classList.contains('fhm-diff-pos')).toBe(false)
+    })
+  })
+
+  it('renders empty bucket notes when the detail has no entries', async () => {
+    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([mockRecon({ id: 1, title: 'Jan 2026' })]))
+    vi.mocked(reconciliationApi.getById).mockResolvedValue(mockApiResponse(mockDetail({ matched: [], needsReview: [], unmatched: [] })))
+    renderWithQuery(<FinlyHubMatchRecords />)
+    await waitFor(() => {
+      expect(screen.getByText('Jan 2026')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('Jan 2026'))
+    await waitFor(() => {
+      expect(screen.getByText('No matched entries.')).toBeTruthy()
+      expect(screen.getByText('No entries need review.')).toBeTruthy()
+      expect(screen.getByText('No unmatched entries.')).toBeTruthy()
+    })
+  })
+
+  it('closes the detail panel via the close button', async () => {
+    vi.mocked(reconciliationApi.list).mockResolvedValue(mockApiResponse([mockRecon({ id: 1, title: 'Jan 2026' })]))
+    vi.mocked(reconciliationApi.getById).mockResolvedValue(mockApiResponse(mockDetail()))
+    renderWithQuery(<FinlyHubMatchRecords />)
+    await waitFor(() => {
+      expect(screen.getByText('Jan 2026')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('Jan 2026'))
+    await waitFor(() => {
+      expect(screen.getByText('Matched')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByLabelText('Close details'))
+    await waitFor(() => {
+      expect(screen.queryByText('Matched')).toBeNull()
+    })
+  })
 })
 
 function mockEntry(overrides: Partial<ReconciliationEntryResponse> = {}): ReconciliationEntryResponse {
@@ -226,9 +279,9 @@ function mockEntry(overrides: Partial<ReconciliationEntryResponse> = {}): Reconc
   }
 }
 
-function mockDetail(overrides: Partial<ReconciliationResponse> = {}): ReconciliationMatchResponse {
+function mockDetail(overrides: Partial<ReconciliationMatchResponse> = {}): ReconciliationMatchResponse {
   return {
-    reconciliation: mockRecon({ status: 'COMPLETED', ...overrides }),
+    reconciliation: mockRecon({ status: 'COMPLETED' }),
     matched: [
       mockEntry({ id: 1, source: 'BANK', description: 'Acme Co', matchStatus: 'MATCHED' }),
       mockEntry({ id: 2, source: 'ACCOUNTING', description: 'Acme Co', matchedEntryId: 1, matchStatus: 'MATCHED' }),
@@ -239,5 +292,6 @@ function mockDetail(overrides: Partial<ReconciliationResponse> = {}): Reconcilia
     unmatched: [
       mockEntry({ id: 4, source: 'BANK', description: 'No Partner', matchStatus: 'UNMATCHED', amountDifference: null, reference: null }),
     ],
+    ...overrides,
   }
 }
