@@ -7,7 +7,7 @@ log() {
 
 PROJECT_DIR="/home/ec2-user/finlyhub"
 
-if [ ! -d "$PROJECT_DIR" ]; then
+if [[ ! -d "$PROJECT_DIR" ]]; then
   log "ERROR: Project directory $PROJECT_DIR not found"
   exit 1
 fi
@@ -15,7 +15,7 @@ fi
 cd "$PROJECT_DIR"
 
 # Determine target commit
-if [ $# -ge 1 ]; then
+if [[ $# -ge 1 ]]; then
   TARGET="$1"
   log "Rolling back to $TARGET..."
   git reset --hard "$TARGET"

@@ -26,8 +26,8 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 8MB
+      max-request-size: 16MB
 
 jwt:
   secret: ${JWT_SECRET:ZHZlcmZhc3RseXNhZmUyNWhlYXZ5bHlvdXJ0b3VnaHRsb25nMTAyNA==}

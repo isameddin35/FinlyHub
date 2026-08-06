@@ -25,7 +25,8 @@ if ! docker compose version &>/dev/null; then
   else
     log "Package not found, downloading binary from GitHub..."
     mkdir -p /usr/local/lib/docker/cli-plugins
-    curl -sL "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-x86_64" \
+    curl -fsSL --proto =https --tlsv1.2 \
+      "https://github.com/docker/compose/releases/download/v2.32.4/docker-compose-linux-x86_64" \
       -o /usr/local/lib/docker/cli-plugins/docker-compose
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
   fi
@@ -45,7 +46,7 @@ fi
 REPO_URL="${REPO_URL:-https://github.com/isameddin35/FinlyHub.git}"
 PROJECT_DIR="/home/ec2-user/finlyhub"
 
-if [ -d "$PROJECT_DIR" ]; then
+if [[ -d "$PROJECT_DIR" ]]; then
   log "Updating project from git..."
   cd "$PROJECT_DIR"
   git pull
@@ -59,14 +60,15 @@ fi
 log "Fetching secrets from SSM Parameter Store..."
 
 fetch_ssm() {
-  aws ssm get-parameter --name "$1" --with-decryption --query Parameter.Value --output text 2>/dev/null || echo ""
+  local name="$1"
+  aws ssm get-parameter --name "$name" --with-decryption --query Parameter.Value --output text 2>/dev/null || echo ""
 }
 
 JWT_SECRET=$(fetch_ssm "/finlyhub/JWT_SECRET")
 DB_PASSWORD=$(fetch_ssm "/finlyhub/DB_PASSWORD")
 OPENAI_API_KEY=$(fetch_ssm "/finlyhub/OPENAI_API_KEY")
 
-if [ -z "$JWT_SECRET" ] || [ -z "$DB_PASSWORD" ]; then
+if [[ -z "$JWT_SECRET" || -z "$DB_PASSWORD" ]]; then
   log "WARNING: Failed to fetch secrets from SSM, generating fresh ones..."
   JWT_SECRET=$(openssl rand -base64 48 | tr -d '/=+\n\r')
   DB_PASSWORD=$(openssl rand -base64 32 | tr -d '/=+\n\r')
@@ -74,7 +76,7 @@ if [ -z "$JWT_SECRET" ] || [ -z "$DB_PASSWORD" ]; then
   aws ssm put-parameter --name "/finlyhub/DB_PASSWORD" --value "$DB_PASSWORD" --type SecureString --overwrite 2>/dev/null || true
 fi
 
-if [ -z "$OPENAI_API_KEY" ]; then
+if [[ -z "$OPENAI_API_KEY" ]]; then
   log "WARNING: OPENAI_API_KEY not found in SSM. Chat, extraction, and categorization will fail."
 fi
 
@@ -135,7 +137,7 @@ for i in $(seq 1 30); do
   sleep 5
 done
 
-if [ "$BACKEND_HEALTHY" = false ]; then
+if [[ "$BACKEND_HEALTHY" = false ]]; then
   log "ERROR: Backend failed to start within 150s. Check logs with: docker compose logs backend"
   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps
   exit 1
@@ -157,7 +159,7 @@ for i in $(seq 1 12); do
   sleep 5
 done
 
-if [ "$FRONTEND_HEALTHY" = false ]; then
+if [[ "$FRONTEND_HEALTHY" = false ]]; then
   log "WARNING: Frontend may not be serving traffic. Check logs with: docker compose logs frontend"
 fi
 
@@ -166,9 +168,10 @@ TOTAL=$(docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml p
 RUNNING=$(docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps --services --filter "status=running" | wc -l)
 log "Running $RUNNING/$TOTAL services"
 
-if [ "$RUNNING" -eq "$TOTAL" ]; then
+if [[ "$RUNNING" -eq "$TOTAL" ]]; then
   log "Deployment complete!"
-  log "Access the app at http://$(curl -s http://checkip.amazonaws.com)/"
+  PUBLIC_IP=$(curl -fsSL --proto =https --tlsv1.2 https://checkip.amazonaws.com)
+  log "Access the app at https://${PUBLIC_IP}/"
 else
   log "Some services are not running. Check logs with: docker compose logs"
   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml ps
