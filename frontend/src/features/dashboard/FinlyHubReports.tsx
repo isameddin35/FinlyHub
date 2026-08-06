@@ -363,15 +363,15 @@ export function FinlyHubReports() {
           <div className="fhr-panel">
             <h3>Generate Report</h3>
             <div className="fhr-field">
-              <label>Report Type</label>
-              <select value={type} onChange={(e) => { setType(e.target.value); setSubtype(""); }}>
+              <label htmlFor="fhr-type">Report Type</label>
+              <select id="fhr-type" value={type} onChange={(e) => { setType(e.target.value); setSubtype(""); }}>
                 <option value="">Select type</option>
                 {REPORT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div className="fhr-field">
-              <label>Subtype</label>
-              <select value={subtype} onChange={(e) => setSubtype(e.target.value)} disabled={!type}>
+              <label htmlFor="fhr-subtype">Subtype</label>
+              <select id="fhr-subtype" value={subtype} onChange={(e) => setSubtype(e.target.value)} disabled={!type}>
                 <option value="">Select subtype</option>
                 {(TYPE_SUBTYPES[type as keyof typeof TYPE_SUBTYPES] || []).map((s) => (
                   <option key={s} value={s}>{SUBTYPE_LABEL[s] || s}</option>
@@ -379,12 +379,12 @@ export function FinlyHubReports() {
               </select>
             </div>
             <div className="fhr-field">
-              <label>Start Date</label>
-              <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
+              <label htmlFor="fhr-start-date">Start Date</label>
+              <input id="fhr-start-date" type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
             </div>
             <div className="fhr-field">
-              <label>End Date</label>
-              <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
+              <label htmlFor="fhr-end-date">End Date</label>
+              <input id="fhr-end-date" type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
             </div>
             <button type="button" className="fhr-generate-btn" disabled={!canGenerate || generateMutation.isPending} onClick={() => generateMutation.mutate()}>
               {generateMutation.isPending ? "Generating..." : "Generate Report"}

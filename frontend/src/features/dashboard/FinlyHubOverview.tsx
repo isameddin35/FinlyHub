@@ -195,8 +195,8 @@ function LoadingSkeleton() {
         <p>Loading your data...</p>
       </div>
       <div className="fho-stats">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div className="fho-stat-card" key={i}>
+        {Array.from({ length: 5 }).map((_, n) => (
+          <div className="fho-stat-card" key={`stat-${n}`}>
             <div className="fho-stat-head">
               <span className="fho-stat-label" style={{ background: '#E2E8F0', width: 80, height: 14, borderRadius: 4, display: 'inline-block' }} />
               <div className="fho-stat-icon" style={{ background: '#E2E8F0' }} />

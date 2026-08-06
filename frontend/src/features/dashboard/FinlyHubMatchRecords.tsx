@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { reconciliationApi } from '@/api/reconciliation'
-import type { ReconciliationEntryResponse } from '@/types/reconciliation'
+import type { ReconciliationEntryResponse, ReconciliationMatchResponse, ReconciliationResponse } from '@/types/reconciliation'
 
 const CSS = `
 .fhm-root{ font-family:'Inter', sans-serif; color:#1E293B; }
@@ -68,6 +68,7 @@ const CSS = `
 
 .fhm-cards{ display:flex; flex-wrap:wrap; gap:16px; }
 .fhm-recon-card{
+  display:block; width:100%; text-align:left; font-family:'Inter', sans-serif; font-size:inherit;
   padding:18px 20px; border-radius:16px; background:rgba(255,255,255,0.8); border:1px solid #E2E8F0;
   max-width:420px; cursor:pointer; transition:border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -216,6 +217,23 @@ interface MatchedPair {
   accounting: Entry
 }
 
+type StatusStyle = { bg: string; color: string }
+
+function statusStyle(status: string): StatusStyle {
+  return STATUS_COLORS[status] || { bg: '#F1F5F9', color: '#64748B' }
+}
+
+function diffClass(diff: number | null | undefined): string {
+  if (diff == null) return ''
+  if (diff > 0) return ' fhm-diff-pos'
+  if (diff < 0) return ' fhm-diff-neg'
+  return ''
+}
+
+function EmptyNote({ children }: Readonly<{ children: string }>) {
+  return <div style={{ fontSize: 13, color: "#94A3B8", padding: "4px 2px" }}>{children}</div>
+}
+
 function buildMatchedPairs(entries: Entry[]): MatchedPair[] {
   const byKey = new Map<number, Entry[]>()
   for (const e of entries) {
@@ -295,7 +313,6 @@ export function FinlyHubMatchRecords() {
     URL.revokeObjectURL(url)
   }
 
-  const statusStyle = (status: string) => STATUS_COLORS[status] || { bg: '#F1F5F9', color: '#64748B' };
   const selectedRecon = reconciliations?.find((r) => r.id === selectedId);
 
   return (
@@ -339,16 +356,16 @@ export function FinlyHubMatchRecords() {
         <h3>Reconciliation Details</h3>
         <div className="fhm-form-row">
           <div className="fhm-field">
-            <label>Title</label>
-            <input type="text" placeholder="e.g. Monthly Bank Reconciliation" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <label htmlFor="fhm-title">Title</label>
+            <input id="fhm-title" type="text" placeholder="e.g. Monthly Bank Reconciliation" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="fhm-field">
-            <label>Period Start</label>
-            <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
+            <label htmlFor="fhm-period-start">Period Start</label>
+            <input id="fhm-period-start" type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
           </div>
           <div className="fhm-field">
-            <label>Period End</label>
-            <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
+            <label htmlFor="fhm-period-end">Period End</label>
+            <input id="fhm-period-end" type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
           </div>
         </div>
         <button type="button" className="fhm-start-btn" disabled={!canStart || matchMutation.isPending} onClick={startMatching}>
@@ -366,149 +383,174 @@ export function FinlyHubMatchRecords() {
         <div style={{ fontSize: 13, color: "#94A3B8", padding: "10px 0" }}>No reconciliations yet.</div>
       ) : (
         <div className="fhm-cards">
-          {reconciliations.map((r) => {
-            const ss = statusStyle(r.status)
-            const isSelected = r.id === selectedId
-            return (
-              <div
-                className={"fhm-recon-card" + (isSelected ? " fhm-selected" : "")}
-                key={r.id}
-                role="button"
-                tabIndex={0}
-                aria-pressed={isSelected}
-                onClick={() => setSelectedId(isSelected ? null : r.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(isSelected ? null : r.id) } }}
-              >
-                <div className="fhm-recon-top">
-                  <span className="fhm-recon-title">{r.title}</span>
-                  <span className="fhm-status-pill" style={{ background: ss.bg, color: ss.color }}>{r.status}</span>
-                </div>
-                <div className="fhm-recon-range">{r.periodStart} — {r.periodEnd}</div>
-                <div className="fhm-recon-created">{formatDate(r.createdAt)}</div>
-                <div className="fhm-recon-counts">
-                  <span className="fhm-count-chip fhm-chip-match">{r.matchedCount} matched</span>
-                  <span className="fhm-count-chip fhm-chip-review">{r.needsReviewCount} needs review</span>
-                  <span className="fhm-count-chip fhm-chip-unmatch">{r.unmatchedCount} unmatched</span>
-                  <span className="fhm-count-chip">{formatAmount(r.discrepancyAmount)} diff</span>
-                </div>
-              </div>
-            )
-          })}
+          {reconciliations.map((r) => (
+            <ReconCard
+              key={r.id}
+              r={r}
+              selected={r.id === selectedId}
+              onSelect={() => setSelectedId(r.id === selectedId ? null : r.id)}
+            />
+          ))}
         </div>
       )}
 
       {selectedRecon && (
-        <div className="fhm-detail">
-          <div className="fhm-detail-top">
-            <div>
-              <div className="fhm-detail-title">{detail?.reconciliation.title ?? selectedRecon.title}</div>
-              <div className="fhm-detail-sub">
-                {selectedRecon.periodStart} — {selectedRecon.periodEnd} · Created {formatDate(selectedRecon.createdAt)}
-              </div>
-            </div>
-            <div className="fhm-detail-actions">
-              {selectedRecon.status !== 'APPROVED' && (
-                <button
-                  type="button"
-                  className="fhm-approve-btn"
-                  disabled={approveMutation.isPending}
-                  onClick={() => approveMutation.mutate()}
-                >
-                  <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7" /></svg>
-                  {approveMutation.isPending ? "Approving..." : "Approve"}
-                </button>
-              )}
-              <button type="button" className="fhm-close-btn" aria-label="Close details" onClick={() => setSelectedId(null)}>×</button>
-            </div>
-          </div>
-
-          <div className="fhm-detail-stats">
-            <span className="fhm-count-chip fhm-chip-match">{selectedRecon.matchedCount} matched</span>
-            <span className="fhm-count-chip fhm-chip-review">{selectedRecon.needsReviewCount} needs review</span>
-            <span className="fhm-count-chip fhm-chip-unmatch">{selectedRecon.unmatchedCount} unmatched</span>
-            <span className="fhm-count-chip">{formatAmount(selectedRecon.discrepancyAmount)} discrepancy</span>
-          </div>
-
-          {detailLoading ? (
-            <div className="fhm-spinner" />
-          ) : !detail ? (
-            <div style={{ fontSize: 13, color: "#94A3B8", padding: "10px 0" }}>Unable to load reconciliation details.</div>
-          ) : (
-            <>
-              <div className="fhm-bucket">
-                <div className="fhm-bucket-head">
-                  <span className="fhm-bucket-dot" style={{ background: '#16A34A' }} />
-                  <span className="fhm-bucket-title">Matched</span>
-                  <span className="fhm-bucket-count">{detail.matched.length}</span>
-                </div>
-                {detail.matched.length === 0 ? (
-                  <div style={{ fontSize: 13, color: "#94A3B8", padding: "4px 2px" }}>No matched entries.</div>
-                ) : (
-                  buildMatchedPairs(detail.matched).map((pair) => (
-                    <div className="fhm-pair" key={pair.bank.id}>
-                      <div className="fhm-pair-side fhm-pair-bank">
-                        <div className="fhm-pair-meta">
-                          <span className="fhm-badge fhm-badge-bank">Bank</span>
-                          <span className="fhm-pair-amount">{formatAmount(pair.bank.amount)}</span>
-                        </div>
-                        <div className="fhm-pair-desc">{pair.bank.description}</div>
-                        <div className="fhm-pair-date">{formatDate(pair.bank.transactionDate)}</div>
-                      </div>
-                      <div className="fhm-pair-side fhm-pair-accounting">
-                        <div className="fhm-pair-meta">
-                          <span className="fhm-badge fhm-badge-accounting">Accounting</span>
-                          <span className="fhm-pair-amount">{formatAmount(pair.accounting.amount)}</span>
-                        </div>
-                        <div className="fhm-pair-desc">{pair.accounting.description}</div>
-                        <div className="fhm-pair-date">{formatDate(pair.accounting.transactionDate)}</div>
-                        <div className={"fhm-pair-diff" + (Number(pair.bank.amountDifference) > 0 ? " fhm-diff-pos" : Number(pair.bank.amountDifference) < 0 ? " fhm-diff-neg" : "")}>
-                          {pair.bank.matchScore != null && `Score ${formatScore(pair.bank.matchScore)} · `}
-                          {formatSignedAmount(pair.bank.amountDifference)} diff
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="fhm-bucket">
-                <div className="fhm-bucket-head">
-                  <span className="fhm-bucket-dot" style={{ background: '#C2610A' }} />
-                  <span className="fhm-bucket-title">Needs Review</span>
-                  <span className="fhm-bucket-count">{detail.needsReview.length}</span>
-                </div>
-                {detail.needsReview.length === 0 ? (
-                  <div style={{ fontSize: 13, color: "#94A3B8", padding: "4px 2px" }}>No entries need review.</div>
-                ) : (
-                  detail.needsReview.map((e) => (
-                    <EntryRow key={e.id} entry={e} />
-                  ))
-                )}
-              </div>
-
-              <div className="fhm-bucket">
-                <div className="fhm-bucket-head">
-                  <span className="fhm-bucket-dot" style={{ background: '#DC2626' }} />
-                  <span className="fhm-bucket-title">Unmatched</span>
-                  <span className="fhm-bucket-count">{detail.unmatched.length}</span>
-                </div>
-                {detail.unmatched.length === 0 ? (
-                  <div style={{ fontSize: 13, color: "#94A3B8", padding: "4px 2px" }}>No unmatched entries.</div>
-                ) : (
-                  detail.unmatched.map((e) => (
-                    <EntryRow key={e.id} entry={e} />
-                  ))
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <ReconDetail
+          selectedRecon={selectedRecon}
+          detail={detail}
+          detailLoading={detailLoading}
+          approving={approveMutation.isPending}
+          onApprove={() => approveMutation.mutate()}
+          onClose={() => setSelectedId(null)}
+        />
       )}
     </div>
   );
 }
 
-function EntryRow({ entry }: { entry: Entry }) {
+function ReconCard({ r, selected, onSelect }: Readonly<{ r: ReconciliationResponse; selected: boolean; onSelect: () => void }>) {
+  const ss = statusStyle(r.status)
+  return (
+    <button
+      type="button"
+      className={"fhm-recon-card" + (selected ? " fhm-selected" : "")}
+      aria-pressed={selected}
+      onClick={onSelect}
+    >
+      <div className="fhm-recon-top">
+        <span className="fhm-recon-title">{r.title}</span>
+        <span className="fhm-status-pill" style={{ background: ss.bg, color: ss.color }}>{r.status}</span>
+      </div>
+      <div className="fhm-recon-range">{r.periodStart} — {r.periodEnd}</div>
+      <div className="fhm-recon-created">{formatDate(r.createdAt)}</div>
+      <div className="fhm-recon-counts">
+        <span className="fhm-count-chip fhm-chip-match">{r.matchedCount} matched</span>
+        <span className="fhm-count-chip fhm-chip-review">{r.needsReviewCount} needs review</span>
+        <span className="fhm-count-chip fhm-chip-unmatch">{r.unmatchedCount} unmatched</span>
+        <span className="fhm-count-chip">{formatAmount(r.discrepancyAmount)} diff</span>
+      </div>
+    </button>
+  )
+}
+
+function ReconDetail({ selectedRecon, detail, detailLoading, approving, onApprove, onClose }: Readonly<{
+  selectedRecon: ReconciliationResponse
+  detail: ReconciliationMatchResponse | undefined
+  detailLoading: boolean
+  approving: boolean
+  onApprove: () => void
+  onClose: () => void
+}>) {
+  return (
+    <div className="fhm-detail">
+      <div className="fhm-detail-top">
+        <div>
+          <div className="fhm-detail-title">{detail?.reconciliation.title ?? selectedRecon.title}</div>
+          <div className="fhm-detail-sub">
+            {selectedRecon.periodStart} — {selectedRecon.periodEnd} · Created {formatDate(selectedRecon.createdAt)}
+          </div>
+        </div>
+        <div className="fhm-detail-actions">
+          {selectedRecon.status !== 'APPROVED' && (
+            <button
+              type="button"
+              className="fhm-approve-btn"
+              disabled={approving}
+              onClick={onApprove}
+            >
+              <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7" /></svg>
+              {approving ? "Approving..." : "Approve"}
+            </button>
+          )}
+          <button type="button" className="fhm-close-btn" aria-label="Close details" onClick={onClose}>×</button>
+        </div>
+      </div>
+
+      <div className="fhm-detail-stats">
+        <span className="fhm-count-chip fhm-chip-match">{selectedRecon.matchedCount} matched</span>
+        <span className="fhm-count-chip fhm-chip-review">{selectedRecon.needsReviewCount} needs review</span>
+        <span className="fhm-count-chip fhm-chip-unmatch">{selectedRecon.unmatchedCount} unmatched</span>
+        <span className="fhm-count-chip">{formatAmount(selectedRecon.discrepancyAmount)} discrepancy</span>
+      </div>
+
+      {detailLoading ? (
+        <div className="fhm-spinner" />
+      ) : !detail ? (
+        <div style={{ fontSize: 13, color: "#94A3B8", padding: "10px 0" }}>Unable to load reconciliation details.</div>
+      ) : (
+        <>
+          <MatchedBucket pairs={buildMatchedPairs(detail.matched)} />
+          <EntriesBucket title="Needs Review" dot="#C2610A" entries={detail.needsReview} empty="No entries need review." />
+          <EntriesBucket title="Unmatched" dot="#DC2626" entries={detail.unmatched} empty="No unmatched entries." />
+        </>
+      )}
+    </div>
+  )
+}
+
+function ReconBucket({ title, dot, count, children }: Readonly<{ title: string; dot: string; count: number; children: ReactNode }>) {
+  return (
+    <div className="fhm-bucket">
+      <div className="fhm-bucket-head">
+        <span className="fhm-bucket-dot" style={{ background: dot }} />
+        <span className="fhm-bucket-title">{title}</span>
+        <span className="fhm-bucket-count">{count}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function MatchedBucket({ pairs }: Readonly<{ pairs: MatchedPair[] }>) {
+  return (
+    <ReconBucket title="Matched" dot="#16A34A" count={pairs.length}>
+      {pairs.length === 0 ? (
+        <EmptyNote>No matched entries.</EmptyNote>
+      ) : (
+        pairs.map((pair) => (
+          <div className="fhm-pair" key={pair.bank.id}>
+            <div className="fhm-pair-side fhm-pair-bank">
+              <div className="fhm-pair-meta">
+                <span className="fhm-badge fhm-badge-bank">Bank</span>
+                <span className="fhm-pair-amount">{formatAmount(pair.bank.amount)}</span>
+              </div>
+              <div className="fhm-pair-desc">{pair.bank.description}</div>
+              <div className="fhm-pair-date">{formatDate(pair.bank.transactionDate)}</div>
+            </div>
+            <div className="fhm-pair-side fhm-pair-accounting">
+              <div className="fhm-pair-meta">
+                <span className="fhm-badge fhm-badge-accounting">Accounting</span>
+                <span className="fhm-pair-amount">{formatAmount(pair.accounting.amount)}</span>
+              </div>
+              <div className="fhm-pair-desc">{pair.accounting.description}</div>
+              <div className="fhm-pair-date">{formatDate(pair.accounting.transactionDate)}</div>
+              <div className={"fhm-pair-diff" + diffClass(pair.bank.amountDifference)}>
+                {pair.bank.matchScore != null && `Score ${formatScore(pair.bank.matchScore)} · `}
+                {formatSignedAmount(pair.bank.amountDifference)} diff
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </ReconBucket>
+  )
+}
+
+function EntriesBucket({ title, dot, entries, empty }: Readonly<{ title: string; dot: string; entries: Entry[]; empty: string }>) {
+  return (
+    <ReconBucket title={title} dot={dot} count={entries.length}>
+      {entries.length === 0 ? (
+        <EmptyNote>{empty}</EmptyNote>
+      ) : (
+        entries.map((e) => (
+          <EntryRow key={e.id} entry={e} />
+        ))
+      )}
+    </ReconBucket>
+  )
+}
+
+function EntryRow({ entry }: Readonly<{ entry: Entry }>) {
   const isBank = entry.source === 'BANK'
   return (
     <div className="fhm-entry">

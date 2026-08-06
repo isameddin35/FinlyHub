@@ -2,6 +2,47 @@ import apiClient from './client'
 import type { ApiResponse } from '@/types/api'
 import type { ConversationResponse, MessageResponse, CreateConversationRequest, SendMessageRequest } from '@/types/chatbot'
 
+type TokenHandler = (token: string) => void
+type DoneHandler = (response: MessageResponse) => void
+type ErrorHandler = (error: Error) => void
+
+class SseParser {
+  private buffer = ''
+  private eventType = ''
+  doneReceived = false
+
+  append(chunk: string, onToken: TokenHandler, onDone: DoneHandler, onError: ErrorHandler): void {
+    this.buffer += chunk
+    while (this.buffer.includes('\n')) {
+      const idx = this.buffer.indexOf('\n')
+      const line = idx === 0 ? '' : this.buffer.slice(0, idx)
+      this.buffer = this.buffer.slice(idx + 1)
+      this.consumeLine(line, onToken, onDone, onError)
+    }
+  }
+
+  private consumeLine(line: string, onToken: TokenHandler, onDone: DoneHandler, onError: ErrorHandler): void {
+    if (line.startsWith('event:')) {
+      this.eventType = line.slice(6).trim()
+      return
+    }
+    if (!line.startsWith('data:')) return
+    const payload = line.slice(5).trim()
+    if (this.eventType === 'token') {
+      onToken(payload)
+      return
+    }
+    if (this.eventType === 'done') {
+      this.doneReceived = true
+      try {
+        onDone(JSON.parse(payload) as MessageResponse)
+      } catch {
+        onError(new Error('Failed to parse stream response'))
+      }
+    }
+  }
+}
+
 export const chatbotApi = {
   createConversation: async (data?: CreateConversationRequest) => {
     const res = await apiClient.post<ApiResponse<ConversationResponse>>('/chat/conversations', data || {})
@@ -46,41 +87,15 @@ export const chatbotApi = {
 
       const reader = response.body!.getReader()
       const decoder = new TextDecoder()
-      let buffer = ''
-      let eventType = ''
-      let doneReceived = false
+      const parser = new SseParser()
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-
-        while (buffer.includes('\n')) {
-          const idx = buffer.indexOf('\n')
-          const line = idx === 0 ? '' : buffer.slice(0, idx)
-          buffer = buffer.slice(idx + 1)
-
-          if (line.startsWith('event:')) {
-            eventType = line[6] === ' ' ? line.slice(7).trim() : line.slice(6).trim()
-          } else if (line.startsWith('data:')) {
-            const jsonData = line[5] === ' ' ? line.slice(6) : line.slice(5)
-            if (eventType === 'token') {
-              onToken(jsonData)
-            } else if (eventType === 'done') {
-              doneReceived = true
-              try {
-                const parsed = JSON.parse(jsonData)
-                onDone(parsed as MessageResponse)
-              } catch {
-                onError(new Error('Failed to parse stream response'))
-              }
-            }
-          }
-        }
+        parser.append(decoder.decode(value, { stream: true }), onToken, onDone, onError)
       }
 
-      if (!doneReceived) {
+      if (!parser.doneReceived) {
         onError(new Error('Stream ended without completion'))
       }
     }).catch((err) => {

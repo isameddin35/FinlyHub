@@ -31,6 +31,7 @@ const CSS = `
   padding:32px 20px;
   overflow:hidden;
   background:transparent;
+  border:none; margin:0; font:inherit; text-align:left;
 }
 .fhs-root *{ box-sizing:border-box; }
 .fhs-card{
@@ -110,10 +111,11 @@ const CSS = `
 .fhs-alt{
   text-align:center; font-size:13px; color:var(--grey); margin-top:18px;
 }
-.fhs-alt a{
+.fhs-alt button{
+  background:none; border:none; padding:0; font:inherit;
   color:var(--blue); font-weight:600; text-decoration:none; cursor:pointer;
 }
-.fhs-alt a:hover{ text-decoration:underline; }
+.fhs-alt button:hover{ text-decoration:underline; }
 @media (max-width:480px){
   .fhs-card{ padding:32px 24px 28px; }
   .fhs-row{ grid-template-columns:1fr; gap:0; }
@@ -131,7 +133,7 @@ const CSS = `
 .dark .fhs-input-wrap input:focus{ background:rgba(30,41,59,0.95); border-color:rgba(59,130,246,0.55); }
 `
 
-export function FinlyHubSignup({ onSignInClick, onDismiss }: FinlyHubSignupProps) {
+export function FinlyHubSignup({ onSignInClick, onDismiss }: Readonly<FinlyHubSignupProps>) {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [firstName, setFirstName] = useState('')
@@ -161,7 +163,8 @@ export function FinlyHubSignup({ onSignInClick, onDismiss }: FinlyHubSignupProps
   }
 
   return (
-    <div
+    <button
+      type="button"
       className="fhs-root"
       onClick={(e) => {
         if (e.target === e.currentTarget) onDismiss?.()
@@ -270,9 +273,9 @@ export function FinlyHubSignup({ onSignInClick, onDismiss }: FinlyHubSignupProps
 
         <p className="fhs-alt">
           Already have an account?{' '}
-          <a onClick={onSignInClick}>Sign in</a>
+          <button type="button" onClick={onSignInClick}>Sign in</button>
         </p>
       </div>
-    </div>
+    </button>
   )
 }
