@@ -31,6 +31,7 @@ const CSS = `
   padding:32px 20px;
   overflow:hidden;
   background:transparent;
+  border:none; margin:0; font:inherit; text-align:left;
 }
 .fhl-root *{ box-sizing:border-box; }
 .fhl-grid-texture{
@@ -130,10 +131,11 @@ const CSS = `
 .fhl-alt{
   text-align:center; font-size:13px; color:var(--grey); margin-top:18px;
 }
-.fhl-alt a{
+.fhl-alt button{
+  background:none; border:none; padding:0; font:inherit;
   color:var(--blue); font-weight:600; text-decoration:none; cursor:pointer;
 }
-.fhl-alt a:hover{ text-decoration:underline; }
+.fhl-alt button:hover{ text-decoration:underline; }
 .fhl-demo{
   margin-top:22px; padding:13px 15px; border-radius:12px;
   background:var(--blue-soft); border:1px solid rgba(37,99,235,0.14);
@@ -168,7 +170,7 @@ const CSS = `
 .dark .fhl-demo{ border-color:rgba(37,99,235,0.2); }
 `
 
-export function FinlyHubLogin({ onCreateAccount, onDismiss }: FinlyHubLoginProps) {
+export function FinlyHubLogin({ onCreateAccount, onDismiss }: Readonly<FinlyHubLoginProps>) {
   const { login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -191,7 +193,8 @@ export function FinlyHubLogin({ onCreateAccount, onDismiss }: FinlyHubLoginProps
   }
 
   return (
-    <div
+    <button
+      type="button"
       className="fhl-root"
       onClick={(e) => {
         if (e.target === e.currentTarget) onDismiss?.()
@@ -255,9 +258,9 @@ export function FinlyHubLogin({ onCreateAccount, onDismiss }: FinlyHubLoginProps
 
         <p className="fhl-alt">
           Don't have an account?{' '}
-          <a onClick={onCreateAccount}>Create one</a>
+          <button type="button" onClick={onCreateAccount}>Create one</button>
         </p>
       </div>
-    </div>
+    </button>
   )
 }

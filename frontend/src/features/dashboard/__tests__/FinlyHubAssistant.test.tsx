@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FinlyHubAssistant } from '../FinlyHubAssistant'
@@ -84,8 +84,7 @@ describe('FinlyHubAssistant', () => {
     vi.mocked(chatbotApi.listConversations).mockResolvedValue([mockConv()])
     renderWithQuery(<FinlyHubAssistant />)
     await waitFor(() => {
-      const deleteBtns = screen.getAllByLabelText('Delete conversation')
-      expect(deleteBtns.length).toBe(1)
+      expect(screen.getAllByLabelText('Delete conversation')).toHaveLength(1)
     })
   })
 
@@ -102,7 +101,7 @@ describe('FinlyHubAssistant', () => {
     })
     await userEvent.click(screen.getByText('Q1 Review'))
     await waitFor(() => {
-      expect(screen.getAllByText('What was our revenue?').length).toBe(2)
+      expect(screen.getAllByText('What was our revenue?')).toHaveLength(2)
       expect(screen.getByText('Your revenue was $125,000.')).toBeTruthy()
     })
   })
@@ -173,5 +172,36 @@ describe('FinlyHubAssistant', () => {
         expect.any(Function),
       )
     })
+  })
+
+  it.each(['Enter', ' '])('selects a conversation with the %s key', async (key) => {
+    const conv = mockConv()
+    vi.mocked(chatbotApi.listConversations).mockResolvedValue([conv])
+    vi.mocked(chatbotApi.getMessages).mockResolvedValue([])
+    renderWithQuery(<FinlyHubAssistant />)
+    await waitFor(() => {
+      expect(screen.getByText('Q1 Review')).toBeTruthy()
+    })
+    fireEvent.keyDown(screen.getByText('Q1 Review'), { key })
+    await waitFor(() => {
+      expect(chatbotApi.getMessages).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('deletes only the conversation whose delete button was clicked', async () => {
+    const conv = mockConv()
+    const other = mockConv({ id: 2, title: 'Expense Report' })
+    vi.mocked(chatbotApi.listConversations).mockResolvedValue([conv, other])
+    vi.mocked(chatbotApi.getMessages).mockResolvedValue([])
+    vi.mocked(chatbotApi.deleteConversation).mockResolvedValue(null)
+    renderWithQuery(<FinlyHubAssistant />)
+    await waitFor(() => {
+      expect(screen.getByText('Expense Report')).toBeTruthy()
+    })
+    fireEvent.click(screen.getAllByLabelText('Delete conversation')[1])
+    await waitFor(() => {
+      expect(chatbotApi.deleteConversation).toHaveBeenCalledWith(2)
+    })
+    expect(chatbotApi.getMessages).not.toHaveBeenCalled()
   })
 })

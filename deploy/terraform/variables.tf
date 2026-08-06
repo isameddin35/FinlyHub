@@ -43,3 +43,9 @@ variable "db_password" {
   type        = string
   default     = ""
 }
+
+variable "public_demo_instance" {
+  description = "Associates a public IP to the EC2 instance. True for the public demo at https://finlyhub.org; set false for private deployments"
+  type        = bool
+  default     = true
+}

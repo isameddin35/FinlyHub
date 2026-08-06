@@ -89,6 +89,92 @@ function getConfidenceColor(score: number): string {
   return 'bg-red-500';
 }
 
+function amountToneClass(amount: number): string {
+  return amount < 0 ? 'text-red-500' : 'text-emerald-500';
+}
+
+function CategoryCell({ transaction }: Readonly<{ transaction: TransactionResponse }>) {
+  if (transaction.categorizationStatus === 'APPROVED') {
+    return (
+      <Badge variant="success" className="gap-1">
+        <CheckCircle className="h-3 w-3" />
+        {transaction.categoryName}
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant={transaction.confidenceScore !== null ? getConfidenceVariant(transaction.confidenceScore) : 'secondary'}>
+      {transaction.suggestedCategoryName || 'Uncategorized'}
+    </Badge>
+  )
+}
+
+function ConfidenceCell({ transaction }: Readonly<{ transaction: TransactionResponse }>) {
+  if (transaction.categorizationStatus === 'APPROVED') {
+    return <span className="text-xs text-muted-foreground">—</span>
+  }
+  if (transaction.confidenceScore === null) {
+    return <span className="text-xs text-muted-foreground">N/A</span>
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-2 w-20 overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full transition-all ${getConfidenceColor(transaction.confidenceScore)}`}
+          style={{ width: `${normalizeConfidence(transaction.confidenceScore)}%` }}
+        />
+      </div>
+      <span className="text-xs text-muted-foreground">
+        {formatPercentage(normalizeConfidence(transaction.confidenceScore)!)}
+      </span>
+    </div>
+  )
+}
+
+function ActionsCell({ transaction, categories, selectedCategory, onSelectCategory, onApprove, approving }: Readonly<{
+  transaction: TransactionResponse
+  categories: { id: number; name: string }[] | undefined
+  selectedCategory: string
+  onSelectCategory: (value: string) => void
+  onApprove: () => void
+  approving: boolean
+}>) {
+  if (transaction.categorizationStatus === 'APPROVED') {
+    return (
+      <Badge variant="outline" className="gap-1 border-emerald-200 text-emerald-600">
+        <CheckCircle className="h-3 w-3" />
+        Approved
+      </Badge>
+    )
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Select value={selectedCategory} onValueChange={onSelectCategory}>
+        <SelectTrigger className="h-8 w-[140px]">
+          <SelectValue placeholder="Category..." />
+        </SelectTrigger>
+        <SelectContent>
+          {categories?.map((cat) => (
+            <SelectItem key={cat.id} value={String(cat.id)}>
+              {cat.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={onApprove} disabled={approving}>
+        {approving ? (
+          'Approving...'
+        ) : (
+          <>
+            <CheckCircle className="mr-1 h-3.5 w-3.5" />
+            Approve
+          </>
+        )}
+      </Button>
+    </div>
+  )
+}
+
 export function FinlyHubSpending() {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -155,7 +241,7 @@ export function FinlyHubSpending() {
 
     if (hasCategoryOverride) {
       setApprovingId(transaction.id);
-      approveMutation.mutate({ id: transaction.id, categoryId: parseInt(categoryIdStr) });
+      approveMutation.mutate({ id: transaction.id, categoryId: Number.parseInt(categoryIdStr, 10) });
       return;
     }
 
@@ -204,7 +290,7 @@ export function FinlyHubSpending() {
 
       <div className="fhsp-tabs">
         {TABS.map((t) => (
-          <button key={t} className={"fhsp-tab" + (tab === t ? " fhsp-tab-active" : "")} onClick={() => setTab(t)}>
+          <button type="button" key={t} className={"fhsp-tab" + (tab === t ? " fhsp-tab-active" : "")} onClick={() => setTab(t)}>
             {t === "All" ? "All" : STATUS_LABEL[t] || t}
           </button>
         ))}
@@ -214,8 +300,8 @@ export function FinlyHubSpending() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="space-y-3 p-6">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+              {Array.from({ length: 5 }).map((_, n) => (
+                <Skeleton key={`skeleton-${n}`} className="h-12 w-full" />
               ))}
             </div>
           ) : isError ? (
@@ -265,9 +351,7 @@ export function FinlyHubSpending() {
                         {transaction.description}
                       </td>
                       <td
-                        className={`whitespace-nowrap px-4 py-3 font-medium ${
-                          transaction.amount < 0 ? 'text-red-500' : 'text-emerald-500'
-                        }`}
+                        className={`whitespace-nowrap px-4 py-3 font-medium ${amountToneClass(transaction.amount)}`}
                       >
                         <div className="flex items-center gap-1">
                           {transaction.amount < 0 ? (
@@ -279,87 +363,22 @@ export function FinlyHubSpending() {
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        {transaction.categorizationStatus === "APPROVED" ? (
-                          <Badge variant="success" className="gap-1">
-                            <CheckCircle className="h-3 w-3" />
-                            {transaction.categoryName}
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant={
-                              transaction.confidenceScore !== null
-                                ? getConfidenceVariant(transaction.confidenceScore)
-                                : 'secondary'
-                            }
-                          >
-                            {transaction.suggestedCategoryName || 'Uncategorized'}
-                          </Badge>
-                        )}
+                        <CategoryCell transaction={transaction} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        {transaction.categorizationStatus !== "APPROVED" && transaction.confidenceScore !== null ? (
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-20 overflow-hidden rounded-full bg-muted">
-                              <div
-                                className={`h-full rounded-full transition-all ${getConfidenceColor(transaction.confidenceScore)}`}
-                                style={{ width: `${normalizeConfidence(transaction.confidenceScore)}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                              {formatPercentage(normalizeConfidence(transaction.confidenceScore)!)}
-                            </span>
-                          </div>
-                        ) : transaction.categorizationStatus === "APPROVED" ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">N/A</span>
-                        )}
+                        <ConfidenceCell transaction={transaction} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        {transaction.categorizationStatus !== "APPROVED" ? (
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={selectedCategories[transaction.id] ?? ''}
-                              onValueChange={(value) =>
-                                setSelectedCategories((prev) => ({ ...prev, [transaction.id]: value }))
-                              }
-                            >
-                              <SelectTrigger className="h-8 w-[140px]">
-                                <SelectValue placeholder="Category..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories?.map((cat) => (
-                                  <SelectItem key={cat.id} value={String(cat.id)}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              size="sm"
-                              className="bg-emerald-600 hover:bg-emerald-700"
-                              onClick={() => handleApprove(transaction)}
-                              disabled={approvingId === transaction.id}
-                            >
-                              {approvingId === transaction.id ? (
-                                'Approving...'
-                              ) : (
-                                <>
-                                  <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                                  Approve
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="gap-1 border-emerald-200 text-emerald-600"
-                          >
-                            <CheckCircle className="h-3 w-3" />
-                            Approved
-                          </Badge>
-                        )}
+                        <ActionsCell
+                          transaction={transaction}
+                          categories={categories}
+                          selectedCategory={selectedCategories[transaction.id] ?? ''}
+                          onSelectCategory={(value) =>
+                            setSelectedCategories((prev) => ({ ...prev, [transaction.id]: value }))
+                          }
+                          onApprove={() => handleApprove(transaction)}
+                          approving={approvingId === transaction.id}
+                        />
                       </td>
                     </tr>
                   ))}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FinlyHubSpending } from '../FinlyHubSpending'
@@ -112,5 +112,32 @@ describe('FinlyHubSpending', () => {
       expect(screen.getByText('Pending Review')).toBeTruthy()
       expect(screen.getAllByText('Approved').length).toBeGreaterThanOrEqual(1)
     })
+  })
+
+  it('approves a pending transaction using the suggested category', async () => {
+    vi.mocked(transactionApi.getCategories).mockResolvedValue(mockApiResponse([
+      { id: 2, name: 'Office Expenses', description: 'Office', icon: 'briefcase', color: '#2563EB' },
+    ]))
+    vi.mocked(transactionApi.list).mockResolvedValue(mockApiResponse([mockTx()]))
+    vi.mocked(transactionApi.approve).mockResolvedValue(mockApiResponse(mockTx()))
+    renderWithQuery(<FinlyHubSpending />)
+    await waitFor(() => {
+      expect(screen.getByText('Office supplies')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await waitFor(() => {
+      expect(transactionApi.approve).toHaveBeenCalledWith(1, { categoryId: 2 })
+    })
+  })
+
+  it('shows an approved badge instead of the approve action for approved rows', async () => {
+    vi.mocked(transactionApi.list).mockResolvedValue(mockApiResponse([
+      mockTx({ categorizationStatus: 'APPROVED', categoryName: 'Office Expenses', confidenceScore: null }),
+    ]))
+    renderWithQuery(<FinlyHubSpending />)
+    await waitFor(() => {
+      expect(screen.getByText('Office supplies')).toBeTruthy()
+    })
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
   })
 })

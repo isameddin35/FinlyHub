@@ -72,11 +72,12 @@ data "aws_ssm_parameter" "amzn2_ami" {
 }
 
 resource "aws_instance" "finlyhub" {
-  ami                    = data.aws_ssm_parameter.amzn2_ami.value
-  instance_type          = var.instance_type
-  key_name               = var.ssh_key_name
-  iam_instance_profile   = aws_iam_instance_profile.finlyhub.name
-  vpc_security_group_ids = [aws_security_group.finlyhub.id]
+  ami                        = data.aws_ssm_parameter.amzn2_ami.value
+  instance_type              = var.instance_type
+  key_name                   = var.ssh_key_name
+  iam_instance_profile       = aws_iam_instance_profile.finlyhub.name
+  vpc_security_group_ids     = [aws_security_group.finlyhub.id]
+  associate_public_ip_address = var.public_demo_instance
 
   root_block_device {
     volume_size = 30

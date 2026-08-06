@@ -120,17 +120,17 @@ export function FinlyHubSettings() {
         <h3><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.4" /><path d="M5 20c1.2-3.6 4.2-5.5 7-5.5s5.8 1.9 7 5.5" /></svg>Profile</h3>
         <div className="fhst-row2">
           <div className="fhst-field">
-            <label>First name</label>
-            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <label htmlFor="fhst-first-name">First name</label>
+            <input id="fhst-first-name" type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           </div>
           <div className="fhst-field">
-            <label>Last name</label>
-            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+            <label htmlFor="fhst-last-name">Last name</label>
+            <input id="fhst-last-name" type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </div>
         </div>
         <div className="fhst-field" style={{ marginBottom: 18 }}>
-          <label>Company</label>
-          <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} />
+          <label htmlFor="fhst-company">Company</label>
+          <input id="fhst-company" type="text" value={company} onChange={(e) => setCompany(e.target.value)} />
         </div>
         <button type="button" className="fhst-save-btn" onClick={handleSave} disabled={saving}>
           <svg viewBox="0 0 24 24"><path d="M5 12.5 9.5 17 19 7" /></svg>

@@ -89,6 +89,40 @@ function formatDocDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function statusStyle(status: Document['status']) {
+  switch (status) {
+    case 'INDEXED':
+      return { bg: '#ECFDF5', color: '#16A34A', label: 'Indexed' }
+    case 'PROCESSING':
+      return { bg: '#EFF6FF', color: '#2563EB', label: 'Processing' }
+    case 'UPLOADED':
+      return { bg: '#FFFBEB', color: '#D97706', label: 'Uploaded' }
+    case 'ERROR':
+      return { bg: '#FEF2F2', color: '#DC2626', label: 'Error' }
+  }
+}
+
+function StatusCell({ doc }: Readonly<{ doc: Document }>) {
+  if (doc.status === 'PROCESSING' && doc.totalChunks > 0) {
+    const pct = Math.round((doc.indexedChunks / doc.totalChunks) * 100)
+    return (
+      <div className="fhdc-progress-wrapper">
+        <div className="fhdc-progress-track">
+          <div className="fhdc-progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="fhdc-progress-pct">{pct}%</span>
+      </div>
+    )
+  }
+  const ss = statusStyle(doc.status)
+  return (
+    <span style={{
+      fontSize: '10.5px', fontWeight: 700, padding: '4px 10px', borderRadius: 999,
+      background: ss.bg, color: ss.color, whiteSpace: 'nowrap',
+    }}>{ss.label}</span>
+  )
+}
+
 export function FinlyHubDocuments() {
   const queryClient = useQueryClient()
 
@@ -158,19 +192,6 @@ export function FinlyHubDocuments() {
     }
   }
 
-  const statusStyle = (status: Document['status']) => {
-    switch (status) {
-      case 'INDEXED':
-        return { bg: '#ECFDF5', color: '#16A34A', label: 'Indexed' }
-      case 'PROCESSING':
-        return { bg: '#EFF6FF', color: '#2563EB', label: 'Processing' }
-      case 'UPLOADED':
-        return { bg: '#FFFBEB', color: '#D97706', label: 'Uploaded' }
-      case 'ERROR':
-        return { bg: '#FEF2F2', color: '#DC2626', label: 'Error' }
-    }
-  }
-
   return (
     <div className="fhdc-root">
       <style>{CSS}</style>
@@ -208,7 +229,6 @@ export function FinlyHubDocuments() {
           <div style={{ fontSize: 13, color: "#94A3B8", padding: "10px 4px" }}>No documents uploaded yet.</div>
         ) : (
           docs.map((d) => {
-            const ss = statusStyle(d.status)
             return (
               <div className="fhdc-doc-row" key={d.id}>
                 <div className="fhdc-doc-icon">
@@ -221,19 +241,7 @@ export function FinlyHubDocuments() {
                     <div style={{ fontSize: '11.5px', color: '#DC2626', marginTop: 4 }}>{d.errorMessage}</div>
                   )}
                 </div>
-                {d.status === 'PROCESSING' && d.totalChunks > 0 ? (
-                  <div className="fhdc-progress-wrapper">
-                    <div className="fhdc-progress-track">
-                      <div className="fhdc-progress-fill" style={{ width: `${Math.round((d.indexedChunks / d.totalChunks) * 100)}%` }} />
-                    </div>
-                    <span className="fhdc-progress-pct">{Math.round((d.indexedChunks / d.totalChunks) * 100)}%</span>
-                  </div>
-                ) : (
-                  <span style={{
-                    fontSize: '10.5px', fontWeight: 700, padding: '4px 10px', borderRadius: 999,
-                    background: ss.bg, color: ss.color, whiteSpace: 'nowrap',
-                  }}>{ss.label}</span>
-                )}
+                <StatusCell doc={d} />
                 <div className="fhdc-doc-actions">
                   {(d.status === 'ERROR' || d.status === 'UPLOADED') && (
                     <button

@@ -1,9 +1,15 @@
 import '@testing-library/jest-dom'
 
 class MockIntersectionObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() {
+    /* no-op stub for tests */
+  }
+  unobserve() {
+    /* no-op stub for tests */
+  }
+  disconnect() {
+    /* no-op stub for tests */
+  }
 }
 Object.defineProperty(window, 'IntersectionObserver', {
   writable: true,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FinlyHubBills } from '../FinlyHubBills'
@@ -84,7 +84,7 @@ describe('FinlyHubBills', () => {
       expect(screen.getByText('Beta Inc')).toBeTruthy()
       expect(screen.getByText('INV-001')).toBeTruthy()
       expect(screen.getByText('INV-002')).toBeTruthy()
-      expect(screen.getAllByText('PENDING').length).toBe(2)
+      expect(screen.getAllByText('PENDING')).toHaveLength(2)
     })
   })
 
@@ -114,5 +114,79 @@ describe('FinlyHubBills', () => {
     renderWithQuery(<FinlyHubBills />)
     expect(screen.getByText('Drop files here or click to upload')).toBeTruthy()
     expect(screen.getByText('PDF, PNG, or JPG — up to 10MB')).toBeTruthy()
+  })
+
+  it('closes the modal on Escape', async () => {
+    vi.mocked(invoiceApi.list).mockResolvedValue(mockApiResponse({ content: [mockInvoice()] }))
+    renderWithQuery(<FinlyHubBills />)
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Acme Corp'))
+    await waitFor(() => {
+      expect(screen.getByText('Invoice Details')).toBeTruthy()
+    })
+    const overlay = document.querySelector('.fhb-overlay')!
+    fireEvent.keyDown(overlay, { key: 'Escape' })
+    await waitFor(() => {
+      expect(screen.queryByText('Invoice Details')).toBeNull()
+    })
+  })
+
+  it('closes the modal on backdrop click', async () => {
+    vi.mocked(invoiceApi.list).mockResolvedValue(mockApiResponse({ content: [mockInvoice()] }))
+    renderWithQuery(<FinlyHubBills />)
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Acme Corp'))
+    await waitFor(() => {
+      expect(screen.getByText('Invoice Details')).toBeTruthy()
+    })
+    fireEvent.click(document.querySelector('.fhb-overlay')!)
+    await waitFor(() => {
+      expect(screen.queryByText('Invoice Details')).toBeNull()
+    })
+  })
+
+  it('closes the modal via the close button', async () => {
+    vi.mocked(invoiceApi.list).mockResolvedValue(mockApiResponse({ content: [mockInvoice()] }))
+    renderWithQuery(<FinlyHubBills />)
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Acme Corp'))
+    await waitFor(() => {
+      expect(screen.getByText('Invoice Details')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => {
+      expect(screen.queryByText('Invoice Details')).toBeNull()
+    })
+  })
+
+  it('approves the invoice with the edited fields', async () => {
+    vi.mocked(invoiceApi.list).mockResolvedValue(mockApiResponse({ content: [mockInvoice()] }))
+    vi.mocked(invoiceApi.approve).mockResolvedValue(mockApiResponse(mockInvoice()))
+    renderWithQuery(<FinlyHubBills />)
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeTruthy()
+    })
+    await userEvent.click(screen.getByText('Acme Corp'))
+    await waitFor(() => {
+      expect(screen.getByText('Approve')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByText('Approve'))
+    await waitFor(() => {
+      expect(invoiceApi.approve).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          vendorName: 'Acme Corp',
+          invoiceNumber: 'INV-001',
+          currency: 'USD',
+          totalAmount: 1100,
+        }),
+      )
+    })
   })
 })

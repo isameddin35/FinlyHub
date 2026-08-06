@@ -11,6 +11,25 @@ function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 }
 
+function SourceCards({ msg }: Readonly<{ msg: MessageResponse }>) {
+  if (!msg.sources || msg.sources.length === 0) {
+    return msg.id > 0 ? (
+      <div className="fha-no-sources">No documents matched your question — answering from general knowledge</div>
+    ) : null
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+      {msg.sources.map((s, j) => (
+        <div className="fha-source-card" key={`${msg.id}-src-${j}`}>
+          <svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4" /></svg>
+          <span className="fha-source-text">{s.filename} — {s.excerpt}</span>
+          <span className="fha-source-pct">{Math.round(s.relevanceScore * 100)}%</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function FinlyHubAssistant() {
   const queryClient = useQueryClient()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -157,9 +176,19 @@ export function FinlyHubAssistant() {
               <div
                 key={conv.id}
                 className={`fha-thread${activeConversation?.id === conv.id ? ' fha-active' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-pressed={activeConversation?.id === conv.id}
                 onClick={() => {
                   if (isStreaming) return
                   setActiveConversation(conv)
+                }}
+                onKeyDown={(e) => {
+                  if (isStreaming) return
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setActiveConversation(conv)
+                  }
                 }}
               >
                 <span className="fha-thread-title">{conv.title}</span>
@@ -205,19 +234,7 @@ export function FinlyHubAssistant() {
 
                   return (
                     <div key={msg.id || 'streaming'}>
-                      {msg.sources && msg.sources.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
-                          {msg.sources.map((s, j) => (
-                            <div className="fha-source-card" key={`${msg.id}-src-${j}`}>
-                              <svg viewBox="0 0 24 24"><path d="M6.5 3.5h8l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 6.5 3.5Z" /><path d="M14.5 3.5V8h4" /></svg>
-                              <span className="fha-source-text">{s.filename} — {s.excerpt}</span>
-                              <span className="fha-source-pct">{Math.round(s.relevanceScore * 100)}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : msg.id > 0 ? (
-                        <div className="fha-no-sources">No documents matched your question — answering from general knowledge</div>
-                      ) : null}
+                      <SourceCards msg={msg} />
                       <div className="fha-msg-row fha-ai">
                         <div className="fha-bubble">
                           <div className="fha-ai-avatar">

@@ -646,7 +646,7 @@ const CSS = `
   padding:9px 20px; border-radius:999px;
   background:linear-gradient(135deg, rgba(37,99,235,0.09), rgba(124,58,237,0.09));
   border:1px solid rgba(37,99,235,0.28);
-  color:var(--blue); text-decoration:none; font-weight:700; font-size:13.5px;
+  color:var(--blue); text-decoration:none; font-weight:700; font-size:13.5px; font-family:'Inter', sans-serif;
   transition:transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background 0.3s ease;
   cursor:pointer;
 }
@@ -679,7 +679,7 @@ const CSS = `
   .fh-logotype .fh-word.fh-accent-word.fh-landed .fh-letter{ animation:none; }
   .fh-scroll-hint .fh-label{ animation:none; }
 }
-.fh-root a:focus-visible, .fh-root .fh-card:focus-visible{ outline:2px solid var(--blue); outline-offset:4px; }
+.fh-root a:focus-visible, .fh-root button:focus-visible, .fh-root .fh-card:focus-visible{ outline:2px solid var(--blue); outline-offset:4px; }
 
 .dark .fh-root{ --bg:#0F172A; --navy:#F1F5F9; --slate:#E2E8F0; --grey:#94A3B8; --border:#334155; --blue-soft:rgba(37,99,235,0.12); --bg-tint:#0F172A; }
 .dark .fh-card{ background:rgba(15,23,42,0.8); border-color:rgba(51,65,85,0.6); }
@@ -719,12 +719,17 @@ const CSS = `
 
 /* ---------- small presentational helpers ---------- */
 
-function Shattered({ text, id, accent, wordRef }: {
+function Shattered({ text, id, accent, wordRef }: Readonly<{
   text: string; id: string; accent?: boolean; wordRef: React.RefObject<HTMLSpanElement | null>;
-}) {
+}>) {
   // Builds the letter spans with randomized shatter start positions,
   // same approach as the original shatterify() function.
-  const chars = [...text];
+  const seen = new Map<string, number>();
+  const chars = [...text].map((ch) => {
+    const n = (seen.get(ch) ?? 0) + 1;
+    seen.set(ch, n);
+    return { ch, key: `${ch}-${n}` };
+  });
   const spreadX = accent ? 270 : 190;
   const spreadY = accent ? 170 : 130;
   const rotSpread = accent ? 55 : 40;
@@ -737,16 +742,16 @@ function Shattered({ text, id, accent, wordRef }: {
       id={id}
       ref={wordRef}
     >
-      {chars.map((ch, i) => {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 50 + Math.random() * Math.max(spreadX, spreadY);
+      {chars.map(({ ch, key }, i) => {
+        const angle = Math.random() * Math.PI * 2; // NOSONAR
+        const dist = 50 + Math.random() * Math.max(spreadX, spreadY); // NOSONAR
         const dx = Math.cos(angle) * dist;
         const dy = Math.sin(angle) * dist - 18;
-        const rot = (Math.random() - 0.5) * rotSpread * 2;
-        const delay = baseDelay + Math.random() * 0.3 + i * stagger;
+        const rot = (Math.random() - 0.5) * rotSpread * 2; // NOSONAR
+        const delay = baseDelay + Math.random() * 0.3 + i * stagger; // NOSONAR
         return (
           <span
-            key={i}
+            key={key}
             className="fh-letter"
             style={{
               "--dx": dx.toFixed(1) + "px",
@@ -765,7 +770,7 @@ function Shattered({ text, id, accent, wordRef }: {
 
 
 
-function LazyVideo({ src, poster, mobileSrc }: { src: string; poster: string; mobileSrc?: string }) {
+function LazyVideo({ src, poster, mobileSrc }: Readonly<{ src: string; poster: string; mobileSrc?: string }>) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -799,10 +804,10 @@ function LazyVideo({ src, poster, mobileSrc }: { src: string; poster: string; mo
   );
 }
 
-function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal }: {
+function ValueCard({ index, ax, ay, az, icon, title, text, delay, registerReveal }: Readonly<{
   index: number; ax: string; ay: string; az: string; icon: React.ReactNode;
   title: string; text: string; delay: string; registerReveal: (el: Element) => void;
-}) {
+}>) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -866,13 +871,13 @@ export function FinlyHubLanding() {
     for (let i = 0; i < count; i++) {
       const d = document.createElement("span");
       d.className = "fh-dust";
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 110 + Math.random() * 170;
+      const angle = Math.random() * Math.PI * 2; // NOSONAR
+      const dist = 110 + Math.random() * 170; // NOSONAR
       d.style.setProperty("--ddx", (Math.cos(angle) * dist).toFixed(1) + "px");
       d.style.setProperty("--ddy", (Math.sin(angle) * dist).toFixed(1) + "px");
-      d.style.left = 42 + Math.random() * 16 + "%";
-      d.style.top = 36 + Math.random() * 28 + "%";
-      d.style.animationDelay = (0.45 + Math.random() * 0.85) + "s";
+      d.style.left = 42 + Math.random() * 16 + "%"; // NOSONAR
+      d.style.top = 36 + Math.random() * 28 + "%"; // NOSONAR
+      d.style.animationDelay = (0.45 + Math.random() * 0.85) + "s"; // NOSONAR
       dustLayer.appendChild(d);
       nodes.push(d);
     }
@@ -903,9 +908,9 @@ export function FinlyHubLanding() {
 
   /* ---------- Count-up + IntersectionObserver reveal ---------- */
   useEffect(() => {
-    function runCountUp(el: Element) {
-      const target = parseFloat(el.getAttribute("data-count-to") ?? "");
-      const prefix = el.getAttribute("data-prefix") || "";
+    function runCountUp(el: HTMLElement) {
+      const target = Number.parseFloat(el.dataset.countTo ?? "");
+      const prefix = el.dataset.prefix || "";
       const duration = 1600;
       const start = performance.now();
       function tick(now: number) {
@@ -923,16 +928,16 @@ export function FinlyHubLanding() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            const el = entry.target;
+            const el = entry.target as HTMLElement;
             el.classList.add("fh-in-view");
 
             if (el.classList.contains("fh-card")) {
-              const counters = el.querySelectorAll("[data-count-to]");
+              const counters = el.querySelectorAll<HTMLElement>("[data-count-to]");
               if (counters.length) {
                 setTimeout(() => counters.forEach(runCountUp), 550);
               }
             }
-            if (el.hasAttribute("data-float")) {
+            if (el.dataset.float !== undefined) {
               setTimeout(() => el.classList.add("fh-floaty"), 900);
             }
             io.unobserve(el);
@@ -963,17 +968,17 @@ export function FinlyHubLanding() {
 
     function spawnPacket() {
       if (document.hidden || !layer) return;
-      const horizontal = Math.random() > 0.5;
+      const horizontal = Math.random() > 0.5; // NOSONAR
       const p = document.createElement("div");
       p.className = "fh-packet " + (horizontal ? "h" : "v");
-      const duration = 5 + Math.random() * 4;
+      const duration = 5 + Math.random() * 4; // NOSONAR
       p.style.animationDuration = duration + "s";
       if (horizontal) {
-        const row = Math.floor(Math.random() * rows);
+        const row = Math.floor(Math.random() * rows); // NOSONAR
         p.style.top = row * GRID + "px";
         p.style.left = "0px";
       } else {
-        const col = Math.floor(Math.random() * cols);
+        const col = Math.floor(Math.random() * cols); // NOSONAR
         p.style.left = col * GRID + "px";
         p.style.top = "0px";
       }
@@ -1055,20 +1060,17 @@ export function FinlyHubLanding() {
       <div className="fh-packet-layer" ref={packetLayerRef} />
 
       <div className="fh-top-nav">
-        <a
-          href="#"
+        <button
+          type="button"
           className="fh-login-btn"
-          onClick={(e) => {
-            e.preventDefault();
-            setAuthView("login");
-          }}
+          onClick={() => setAuthView("login")}
         >
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="8" r="3.4" />
             <path d="M5 20c1.2-3.6 4.2-5.5 7-5.5s5.8 1.9 7 5.5" />
           </svg>
           Log in
-        </a>
+        </button>
       </div>
 
       {/* ============ SECTION 1 — HERO & VIDEO SHOWCASE ============ */}
@@ -1094,7 +1096,7 @@ export function FinlyHubLanding() {
               </video>
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
-                <span className="fh-live-dot" />
+                <span className="fh-live-dot" />{' '}
                 Scan
               </span>
             </div>
@@ -1103,7 +1105,7 @@ export function FinlyHubLanding() {
               <LazyVideo src="assets/clip-2-dashboard.mp4" mobileSrc="assets/clip-2-mobile.mp4" poster="assets/clip-2-poster.jpg" />
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
-                <span className="fh-live-dot" />
+                <span className="fh-live-dot" />{' '}
                 Dashboard
               </span>
             </div>
@@ -1112,19 +1114,19 @@ export function FinlyHubLanding() {
               <LazyVideo src="assets/clip-3-approved.mp4" mobileSrc="assets/clip-3-mobile.mp4" poster="assets/clip-3-poster.jpg" />
               <div className="fh-video-overlay" />
               <span className="fh-clip-tag">
-                <span className="fh-live-dot" />
+                <span className="fh-live-dot" />{' '}
                 Approved
               </span>
             </div>
           </div>
           <p className="fh-video-caption">
             <b>See it in action</b>
-            <span className="fh-sep" />
+            <span className="fh-sep" />{' '}
             Scan → Sync → Approved, in seconds
           </p>
         </div>
 
-        <button className="fh-scroll-hint" ref={scrollHintRef} aria-label="Scroll to explore">
+        <button type="button" className="fh-scroll-hint" ref={scrollHintRef} aria-label="Scroll to explore">
           <div className="fh-mouse-wrap">
             <span className="fh-ring" />
             <span className="fh-ring fh-d2" />
@@ -1270,17 +1272,14 @@ export function FinlyHubLanding() {
 
         <p className="fh-signin fh-reveal-on-scroll" ref={registerReveal}>
           <span>Already have an account?</span>
-          <a
-            href="#"
+          <button
+            type="button"
             className="fh-signin-btn"
-            onClick={(e) => {
-              e.preventDefault();
-              setAuthView("login");
-            }}
+            onClick={() => setAuthView("login")}
           >
             Sign in
             <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-          </a>
+          </button>
         </p>
       </section>
 
@@ -1288,8 +1287,16 @@ export function FinlyHubLanding() {
       {authView && (
         <div
           className="fh-login-overlay"
+          role="button"
+          tabIndex={0}
           onClick={(e) => {
             if (e.target === e.currentTarget) setAuthView(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setAuthView(null);
+            }
           }}
         >
           <button

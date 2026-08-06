@@ -74,7 +74,7 @@ describe('FinlyHubLanding', () => {
 
   it('shows login modal when Log in is clicked', async () => {
     render(<FinlyHubLanding />)
-    await userEvent.click(screen.getByRole('link', { name: 'Log in' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Log in' }))
     await waitFor(() => {
       expect(screen.getByText('Welcome back')).toBeTruthy()
     })
@@ -84,7 +84,7 @@ describe('FinlyHubLanding', () => {
     render(<FinlyHubLanding />)
     await userEvent.click(screen.getByText('Create your free account'))
     await waitFor(() => {
-      expect(screen.getAllByText('Create account').length).toBe(2)
+      expect(screen.getAllByText('Create account')).toHaveLength(2)
       expect(screen.getByText('Get started with')).toBeTruthy()
     })
   })

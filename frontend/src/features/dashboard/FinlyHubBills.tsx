@@ -22,6 +22,7 @@ const CSS = `
 .fhb-export-btn svg{ width:15px; height:15px; stroke:#2563EB; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
 
 .fhb-dropzone{
+  display:block; width:100%; font-family:'Inter', sans-serif; font-size:inherit;
   border:1.5px dashed #CBD5E1; border-radius:18px; padding:44px 20px;
   text-align:center; background:rgba(255,255,255,0.6); margin-bottom:30px;
   cursor:pointer; transition:border-color 0.2s ease, background 0.2s ease;
@@ -41,6 +42,7 @@ const CSS = `
 .fhb-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
 
 .fhb-card{
+  display:block; width:100%; text-align:left; font-family:'Inter', sans-serif; font-size:inherit;
   padding:18px 20px; border-radius:16px; background:rgba(255,255,255,0.8);
   border:1px solid #E2E8F0; backdrop-filter:blur(10px); cursor:pointer;
   box-shadow:0 1px 2px rgba(15,23,42,0.03), 0 14px 30px -24px rgba(15,23,42,0.14);
@@ -284,22 +286,15 @@ export function FinlyHubBills() {
         }}
       />
 
-      <div
+      <button
+        type="button"
         className={`fhb-dropzone${uploadMutation.isPending ? ' fhb-disabled' : ''}`}
         style={dragOver ? { borderColor: '#2563EB', background: '#EFF6FF' } : undefined}
         onClick={() => !uploadMutation.isPending && fileInputRef.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        role="button"
-        tabIndex={0}
         aria-label="Upload invoice"
-        onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !uploadMutation.isPending) {
-            e.preventDefault();
-            fileInputRef.current?.click();
-          }
-        }}
       >
         <div className="fhb-drop-icon">
           <svg viewBox="0 0 24 24"><path d="M12 15.5V4.5M8 8.5l4-4 4 4" /><path d="M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15" /></svg>
@@ -308,7 +303,7 @@ export function FinlyHubBills() {
           {uploadMutation.isPending ? 'Uploading...' : 'Drop files here or click to upload'}
         </div>
         <div className="fhb-drop-sub">PDF, PNG, or JPG — up to 10MB</div>
-      </div>
+      </button>
 
       <div className="fhb-section-title">Processed Invoices</div>
       {isLoading ? (
@@ -320,13 +315,11 @@ export function FinlyHubBills() {
       ) : (
         <div className="fhb-grid">
           {invoices.map((inv) => (
-            <div
+            <button
+              type="button"
               className="fhb-card"
               key={inv.id}
-              role="button"
-              tabIndex={0}
               onClick={() => setSelectedInvoice(inv)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedInvoice(inv) }}
             >
               <div className="fhb-card-top">
                 <div>
@@ -348,13 +341,25 @@ export function FinlyHubBills() {
               <div className="fhb-conf-track">
                 <div className="fhb-conf-fill" style={{ width: `${inv.confidenceScore ?? 0}%` }} />
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
       {selectedInvoice && (
-        <div className="fhb-overlay" onClick={(e) => { if (e.target === e.currentTarget) setSelectedInvoice(null) }}>
+        <div
+          className="fhb-overlay"
+          role="button"
+          tabIndex={0}
+          aria-label="Close invoice details"
+          onClick={(e) => { if (e.target === e.currentTarget) setSelectedInvoice(null) }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+              e.preventDefault();
+              setSelectedInvoice(null);
+            }
+          }}
+        >
           <div className="fhb-modal">
             <h3>Invoice Details</h3>
             <p className="fhb-modal-sub">
@@ -363,52 +368,52 @@ export function FinlyHubBills() {
 
             <div className="fhb-modal-grid">
               <div className="fhb-field">
-                <label>Vendor Name</label>
-                <input type="text" value={selectedInvoice.vendorName ?? ''} onChange={(e) => updateField('vendorName', e.target.value || null)} />
+                <label htmlFor="fhb-vendor-name">Vendor Name</label>
+                <input id="fhb-vendor-name" type="text" value={selectedInvoice.vendorName ?? ''} onChange={(e) => updateField('vendorName', e.target.value || null)} />
               </div>
               <div className="fhb-field">
-                <label>Invoice Number</label>
-                <input type="text" value={selectedInvoice.invoiceNumber ?? ''} onChange={(e) => updateField('invoiceNumber', e.target.value || null)} />
+                <label htmlFor="fhb-invoice-number">Invoice Number</label>
+                <input id="fhb-invoice-number" type="text" value={selectedInvoice.invoiceNumber ?? ''} onChange={(e) => updateField('invoiceNumber', e.target.value || null)} />
               </div>
               <div className="fhb-field">
-                <label>Vendor Email</label>
-                <input type="email" value={selectedInvoice.vendorEmail ?? ''} onChange={(e) => updateField('vendorEmail', e.target.value || null)} />
+                <label htmlFor="fhb-vendor-email">Vendor Email</label>
+                <input id="fhb-vendor-email" type="email" value={selectedInvoice.vendorEmail ?? ''} onChange={(e) => updateField('vendorEmail', e.target.value || null)} />
               </div>
               <div className="fhb-field">
-                <label>Currency</label>
-                <input type="text" value={selectedInvoice.currency} onChange={(e) => updateField('currency', e.target.value)} />
+                <label htmlFor="fhb-currency">Currency</label>
+                <input id="fhb-currency" type="text" value={selectedInvoice.currency} onChange={(e) => updateField('currency', e.target.value)} />
               </div>
               <div className="fhb-field">
-                <label>Invoice Date</label>
-                <input type="date" value={toDateInputValue(selectedInvoice.invoiceDate)} onChange={(e) => updateField('invoiceDate', e.target.value || null)} />
+                <label htmlFor="fhb-invoice-date">Invoice Date</label>
+                <input id="fhb-invoice-date" type="date" value={toDateInputValue(selectedInvoice.invoiceDate)} onChange={(e) => updateField('invoiceDate', e.target.value || null)} />
               </div>
               <div className="fhb-field">
-                <label>Due Date</label>
-                <input type="date" value={toDateInputValue(selectedInvoice.dueDate)} onChange={(e) => updateField('dueDate', e.target.value || null)} />
+                <label htmlFor="fhb-due-date">Due Date</label>
+                <input id="fhb-due-date" type="date" value={toDateInputValue(selectedInvoice.dueDate)} onChange={(e) => updateField('dueDate', e.target.value || null)} />
               </div>
               <div className="fhb-field">
-                <label>Subtotal</label>
-                <input type="number" step="0.01" value={selectedInvoice.subtotal ?? ''} onChange={(e) => updateField('subtotal', e.target.value ? Number(e.target.value) : null)} />
+                <label htmlFor="fhb-subtotal">Subtotal</label>
+                <input id="fhb-subtotal" type="number" step="0.01" value={selectedInvoice.subtotal ?? ''} onChange={(e) => updateField('subtotal', e.target.value ? Number(e.target.value) : null)} />
               </div>
               <div className="fhb-field">
-                <label>Tax</label>
-                <input type="number" step="0.01" value={selectedInvoice.taxAmount ?? ''} onChange={(e) => updateField('taxAmount', e.target.value ? Number(e.target.value) : null)} />
+                <label htmlFor="fhb-tax">Tax</label>
+                <input id="fhb-tax" type="number" step="0.01" value={selectedInvoice.taxAmount ?? ''} onChange={(e) => updateField('taxAmount', e.target.value ? Number(e.target.value) : null)} />
               </div>
               <div className="fhb-field">
-                <label>VAT</label>
-                <input type="number" step="0.01" value={selectedInvoice.vatAmount ?? ''} onChange={(e) => updateField('vatAmount', e.target.value ? Number(e.target.value) : null)} />
+                <label htmlFor="fhb-vat">VAT</label>
+                <input id="fhb-vat" type="number" step="0.01" value={selectedInvoice.vatAmount ?? ''} onChange={(e) => updateField('vatAmount', e.target.value ? Number(e.target.value) : null)} />
               </div>
               <div className="fhb-field">
-                <label>Discount</label>
-                <input type="number" step="0.01" value={selectedInvoice.discountAmount ?? ''} onChange={(e) => updateField('discountAmount', e.target.value ? Number(e.target.value) : null)} />
+                <label htmlFor="fhb-discount">Discount</label>
+                <input id="fhb-discount" type="number" step="0.01" value={selectedInvoice.discountAmount ?? ''} onChange={(e) => updateField('discountAmount', e.target.value ? Number(e.target.value) : null)} />
               </div>
               <div className="fhb-field">
-                <label>Total Amount</label>
-                <input type="number" step="0.01" value={selectedInvoice.totalAmount} onChange={(e) => updateField('totalAmount', Number(e.target.value) || 0)} />
+                <label htmlFor="fhb-total">Total Amount</label>
+                <input id="fhb-total" type="number" step="0.01" value={selectedInvoice.totalAmount} onChange={(e) => updateField('totalAmount', Number(e.target.value) || 0)} />
               </div>
               <div className="fhb-field">
-                <label>Status</label>
-                <input type="text" value={selectedInvoice.status} readOnly />
+                <label htmlFor="fhb-status">Status</label>
+                <input id="fhb-status" type="text" value={selectedInvoice.status} readOnly />
               </div>
             </div>
 

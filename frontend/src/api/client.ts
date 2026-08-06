@@ -28,7 +28,7 @@ apiClient.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (originalRequest.url?.includes('/auth/')) {
-        return Promise.reject(error)
+        throw error
       }
       originalRequest._retry = true
       const refreshToken = localStorage.getItem('refreshToken')
@@ -56,7 +56,7 @@ apiClient.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error)
+    throw error
   }
 )
 
