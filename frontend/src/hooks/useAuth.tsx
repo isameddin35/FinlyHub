@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import type { UserProfile, LoginRequest, RegisterRequest } from '@/types/auth'
 import { authApi } from '@/api/auth'
+import { SESSION_EXPIRED_EVENT } from '@/api/client'
 
 interface AuthContextType {
   user: UserProfile | null
@@ -60,6 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(updated))
     setUser(updated)
   }, [])
+
+  useEffect(() => {
+    const onSessionExpired = () => logout()
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+  }, [logout])
 
   const value = useMemo(
     () => ({

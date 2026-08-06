@@ -7,6 +7,7 @@ import com.finlyhub.auth.dto.RegisterRequest;
 import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.DuplicateResourceException;
 import com.finlyhub.config.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import com.finlyhub.user.dto.UserProfileResponse;
 import com.finlyhub.user.entity.Role;
 import com.finlyhub.user.entity.User;
@@ -72,7 +73,12 @@ public class AuthService {
             throw new BusinessException("Invalid or expired refresh token");
         }
 
-        Long userId = jwtTokenProvider.getUserIdFromToken(request.getRefreshToken());
+        Claims claims = jwtTokenProvider.parseClaims(request.getRefreshToken());
+        if (!"refresh".equals(claims.get("type"))) {
+            throw new BusinessException("Invalid or expired refresh token");
+        }
+
+        Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
 

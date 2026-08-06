@@ -7,6 +7,7 @@ import com.finlyhub.auth.dto.RegisterRequest;
 import com.finlyhub.common.exception.BusinessException;
 import com.finlyhub.common.exception.DuplicateResourceException;
 import com.finlyhub.config.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import com.finlyhub.user.dto.UserProfileResponse;
 import com.finlyhub.user.entity.Role;
 import com.finlyhub.user.entity.User;
@@ -165,9 +166,12 @@ class AuthServiceTest {
         request.setRefreshToken("valid-refresh-token");
 
         User user = createUser(1L, "test@example.com", "encoded", "John", "Doe", null, Set.of(new Role("VIEWER")));
+        Claims claims = mock(Claims.class);
+        when(claims.get("type")).thenReturn("refresh");
 
         when(jwtTokenProvider.validateToken("valid-refresh-token")).thenReturn(true);
-        when(jwtTokenProvider.getUserIdFromToken("valid-refresh-token")).thenReturn(1L);
+        when(jwtTokenProvider.parseClaims("valid-refresh-token")).thenReturn(claims);
+        when(jwtTokenProvider.getUserIdFromClaims(claims)).thenReturn(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(jwtTokenProvider.generateAccessToken(anyLong(), anyString(), anyList())).thenReturn("new-access");
         when(jwtTokenProvider.generateRefreshToken(anyLong())).thenReturn("new-refresh");
@@ -177,6 +181,20 @@ class AuthServiceTest {
 
         assertThat(response.getAccessToken()).isEqualTo("new-access");
         assertThat(response.getRefreshToken()).isEqualTo("new-refresh");
+    }
+
+    @Test
+    void refresh_WithAccessToken_ThrowsBusinessException() {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("access-token");
+        Claims claims = mock(Claims.class);
+
+        when(jwtTokenProvider.validateToken("access-token")).thenReturn(true);
+        when(jwtTokenProvider.parseClaims("access-token")).thenReturn(claims);
+
+        assertThatThrownBy(() -> authService.refresh(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Invalid or expired refresh token");
     }
 
     @Test
