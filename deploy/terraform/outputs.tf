@@ -1,6 +1,6 @@
 output "public_ip" {
-  description = "Public IP address of the EC2 instance"
-  value       = aws_instance.finlyhub.public_ip
+  description = "Public IP address of the EC2 instance (Elastic IP)"
+  value       = aws_eip.finlyhub.public_ip
 }
 
 output "public_dns" {
@@ -13,9 +13,12 @@ output "instance_id" {
   value       = aws_instance.finlyhub.id
 }
 
-output "ssh_command" {
-  description = "SSH command to access the instance"
-  value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_instance.finlyhub.public_dns}"
+output "elastic_ip" {
+  description = "Elastic IP allocated to the EC2 instance"
+  value       = aws_eip.finlyhub.public_ip
 }
 
-
+output "ssh_command" {
+  description = "SSH command to access the instance"
+  value       = "ssh -i ~/.ssh/${var.ssh_key_name}.pem ec2-user@${aws_eip.finlyhub.public_ip}"
+}

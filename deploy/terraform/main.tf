@@ -91,3 +91,12 @@ resource "aws_instance" "finlyhub" {
     Name = var.project_name
   }
 }
+
+resource "aws_eip" "finlyhub" {
+  tags = { Name = "${var.project_name}-eip" }
+}
+
+resource "aws_eip_association" "finlyhub" {
+  instance_id   = aws_instance.finlyhub.id
+  allocation_id = aws_eip.finlyhub.id
+}
